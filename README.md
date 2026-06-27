@@ -163,7 +163,7 @@ ai-soc-platform/
 ## Installation
 
 ```bash
-git clone https://github.com/<username>/ai-soc-platform.git
+git clone https://github.com/mantraak/ai-soc-platform.git
 
 cd ai-soc-platform
 
