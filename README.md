@@ -162,15 +162,21 @@ ai-soc-platform/
 
 ## Installation
 
-```bash
-git clone https://github.com/mantraak/ai-soc-platform.git
+The admin/player application is being developed separately. The SOC tool layer
+can already be initialized and started on Windows with:
 
-cd ai-soc-platform
-
-docker compose up --build
+```powershell
+./infrastructure/tools.cmd init all
+./infrastructure/tools.cmd start all
 ```
 
-The application will be available after all services start.
+### SOC tools (current implementation)
+
+The Dockerized tool layer is available independently from the application UI.
+It includes Wazuh, MISP, TheHive, Prometheus and Grafana using selectable Docker
+Compose profiles. See [infrastructure/README.md](infrastructure/README.md) for
+requirements, startup commands, credentials and the backend integration
+contract.
 
 ---
 
