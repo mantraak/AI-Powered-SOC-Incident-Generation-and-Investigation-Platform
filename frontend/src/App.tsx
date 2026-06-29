@@ -9,6 +9,9 @@ import { AdminDashboard } from "./pages/admin/AdminDashboard";
 import { AdminScenariosPage, CreateScenarioPage, ScenarioDetailPage } from "./pages/admin/ScenarioPages";
 import { AdminUsersPage } from "./pages/admin/UsersPage";
 import { AdminLabsPage } from "./pages/admin/LabsPage";
+import { AdminToolsPage } from "./pages/admin/ToolsPage";
+import { ModeratorPage } from "./pages/admin/ModeratorPage";
+import { AISettingsPage } from "./pages/admin/AISettingsPage";
 
 // Player pages
 import { PlayerDashboard } from "./pages/player/PlayerDashboard";
@@ -17,7 +20,7 @@ import { LabInvestigationPage } from "./pages/player/LabInvestigationPage";
 
 function ProtectedRoute({ children, role }: { children: JSX.Element; role?: "admin" | "player" }) {
   const { user, loading } = useAuth();
-  if (loading) return <div className="min-h-screen bg-[#0d1117] flex items-center justify-center"><div className="text-[#8b949e]">Loading...</div></div>;
+  if (loading) return <div className="min-h-screen bg-[#11131b] flex items-center justify-center"><div className="text-[#8d90a0]">Loading...</div></div>;
   if (!user) return <Navigate to="/login" replace />;
   if (role === "admin" && user.role !== "admin") return <Navigate to="/player/dashboard" replace />;
   return children;
@@ -46,6 +49,9 @@ export default function App() {
           <Route path="/admin/scenarios/:id" element={<ProtectedRoute role="admin"><ScenarioDetailPage /></ProtectedRoute>} />
           <Route path="/admin/users" element={<ProtectedRoute role="admin"><AdminUsersPage /></ProtectedRoute>} />
           <Route path="/admin/labs" element={<ProtectedRoute role="admin"><AdminLabsPage /></ProtectedRoute>} />
+          <Route path="/admin/tools" element={<ProtectedRoute role="admin"><AdminToolsPage /></ProtectedRoute>} />
+          <Route path="/admin/moderator" element={<ProtectedRoute role="admin"><ModeratorPage /></ProtectedRoute>} />
+          <Route path="/admin/ai-settings" element={<ProtectedRoute role="admin"><AISettingsPage /></ProtectedRoute>} />
 
           {/* Player routes */}
           <Route path="/player/dashboard" element={<ProtectedRoute><PlayerDashboard /></ProtectedRoute>} />

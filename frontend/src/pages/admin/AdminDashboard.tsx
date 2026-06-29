@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { AppLayout, PageHeader } from "../../components/layout/AppLayout";
-import { Card, Spinner } from "../../components/ui";
+import { Card, Spinner, StatusBadge, DifficultyBadge, Icon, EmptyState } from "../../components/ui";
 import { useAuth } from "../../store/authContext";
 import api from "../../api/client";
 import type { Scenario, User, Lab } from "../../types";
@@ -22,40 +22,70 @@ export function AdminDashboard() {
   }, []);
 
   const statCards = [
-    { label: "Total Scenarios", value: scenarios.length, icon: "🎯", color: "text-cyan-400", link: "/admin/scenarios" },
-    { label: "Published", value: scenarios.filter((s) => s.status === "published").length, icon: "✅", color: "text-green-400", link: "/admin/scenarios" },
-    { label: "Total Users", value: users.length, icon: "👥", color: "text-purple-400", link: "/admin/users" },
-    { label: "Active Labs", value: labs.filter((l) => l.status === "in_progress").length, icon: "🧪", color: "text-yellow-400", link: "/admin/labs" },
+    {
+      label: "Total Scenarios",
+      value: scenarios.length,
+      icon: "manage_search",
+      tone: { ring: "ring-[#2563eb]/30", iconBg: "bg-[#2563eb]/15", iconColor: "text-[#b4c5ff]" },
+      link: "/admin/scenarios",
+    },
+    {
+      label: "Published",
+      value: scenarios.filter((s) => s.status === "published").length,
+      icon: "check_circle",
+      tone: { ring: "ring-emerald-500/30", iconBg: "bg-emerald-500/10", iconColor: "text-emerald-300" },
+      link: "/admin/scenarios",
+    },
+    {
+      label: "Total Users",
+      value: users.length,
+      icon: "group",
+      tone: { ring: "ring-purple-500/30", iconBg: "bg-purple-500/10", iconColor: "text-purple-300" },
+      link: "/admin/users",
+    },
+    {
+      label: "Active Labs",
+      value: labs.filter((l) => l.status === "in_progress").length,
+      icon: "biotech",
+      tone: { ring: "ring-amber-500/30", iconBg: "bg-amber-500/10", iconColor: "text-amber-300" },
+      link: "/admin/labs",
+    },
   ];
 
-  const recentScenarios = [...scenarios].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 5);
+  const recentScenarios = [...scenarios]
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(0, 5);
 
-  const difficultyColor: Record<string, string> = { beginner: "text-green-400", intermediate: "text-yellow-400", advanced: "text-red-400" };
-  const statusColor: Record<string, string> = {
-    draft: "text-gray-400", generating: "text-yellow-400", generated: "text-blue-400",
-    validation_failed: "text-red-400", ready: "text-green-400", published: "text-cyan-400",
-  };
+  const quickActions = [
+    { label: "Create New Scenario", icon: "add_circle", link: "/admin/scenarios/create", desc: "Build an AI-powered incident" },
+    { label: "Manage Users",        icon: "manage_accounts", link: "/admin/users", desc: "Add or edit player accounts" },
+    { label: "Assign Labs",         icon: "assignment_ind", link: "/admin/labs", desc: "Assign scenarios to players" },
+  ];
 
   return (
     <AppLayout>
-      <div className="p-6">
+      <div className="p-6 lg:p-8 max-w-7xl mx-auto">
         <PageHeader
-          title={`Welcome back, ${user?.full_name?.split(" ")[0]} 👋`}
-          subtitle="Platform overview and recent activity"
+          title={`Welcome back, ${user?.full_name?.split(" ")[0] ?? "Analyst"}`}
+          subtitle="Mission Control · Platform overview and recent activity"
         />
 
-        {loading ? <Spinner /> : (
+        {loading ? (
+          <Spinner />
+        ) : (
           <>
-            {/* Stats */}
+            {/* Stat cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
               {statCards.map((s) => (
-                <Link key={s.label} to={s.link}>
-                  <Card className="hover:border-[#30363d] transition-colors cursor-pointer">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-2xl">{s.icon}</span>
-                      <span className={`text-3xl font-bold ${s.color}`}>{s.value}</span>
+                <Link key={s.label} to={s.link} data-testid={`stat-${s.label.toLowerCase().replace(/\s/g, "-")}`}>
+                  <Card className="hover:border-[#b4c5ff]/40 transition-all duration-200 cursor-pointer group h-full">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className={`w-10 h-10 rounded-lg ${s.tone.iconBg} ring-1 ${s.tone.ring} flex items-center justify-center transition-transform group-hover:scale-105`}>
+                        <Icon name={s.icon} className={`text-xl ${s.tone.iconColor}`} />
+                      </div>
+                      <span className="text-3xl font-bold text-[#e1e2ed] tracking-tight">{s.value}</span>
                     </div>
-                    <p className="text-xs text-[#8b949e]">{s.label}</p>
+                    <p className="text-xs font-medium text-[#8d90a0] uppercase tracking-wider">{s.label}</p>
                   </Card>
                 </Link>
               ))}
@@ -64,22 +94,29 @@ export function AdminDashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Recent Scenarios */}
               <Card>
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-sm font-semibold text-[#e6edf3]">Recent Scenarios</h2>
-                  <Link to="/admin/scenarios" className="text-xs text-cyan-400 hover:underline">View all →</Link>
+                <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#434655]">
+                  <div className="flex items-center gap-2.5">
+                    <Icon name="history" className="text-[#b4c5ff] text-lg" />
+                    <h2 className="text-sm font-semibold text-[#e1e2ed]">Recent Scenarios</h2>
+                  </div>
+                  <Link to="/admin/scenarios" className="text-xs text-[#b4c5ff] hover:underline flex items-center gap-1">
+                    View all <Icon name="arrow_forward" className="text-xs" />
+                  </Link>
                 </div>
                 {recentScenarios.length === 0 ? (
-                  <p className="text-sm text-[#8b949e] text-center py-6">No scenarios yet</p>
+                  <EmptyState icon="manage_search" title="No scenarios yet" description="Generated scenarios will appear here" />
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {recentScenarios.map((s) => (
                       <Link key={s.id} to={`/admin/scenarios/${s.id}`} className="block">
-                        <div className="flex items-center justify-between p-2 rounded hover:bg-[#21262d] transition-colors">
-                          <div>
-                            <p className="text-sm text-[#e6edf3] font-medium">{s.title}</p>
-                            <p className={`text-xs ${difficultyColor[s.difficulty]}`}>{s.difficulty}</p>
+                        <div className="flex items-center justify-between p-2.5 rounded-lg hover:bg-[#282a32] border border-transparent hover:border-[#434655] transition-all">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm text-[#e1e2ed] font-medium truncate">{s.title}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <DifficultyBadge difficulty={s.difficulty} />
+                            </div>
                           </div>
-                          <span className={`text-xs font-medium ${statusColor[s.status]}`}>{s.status}</span>
+                          <StatusBadge status={s.status} />
                         </div>
                       </Link>
                     ))}
@@ -89,19 +126,26 @@ export function AdminDashboard() {
 
               {/* Quick Actions */}
               <Card>
-                <h2 className="text-sm font-semibold text-[#e6edf3] mb-4">Quick Actions</h2>
+                <div className="flex items-center gap-2.5 mb-4 pb-3 border-b border-[#434655]">
+                  <Icon name="bolt" className="text-[#b4c5ff] text-lg" />
+                  <h2 className="text-sm font-semibold text-[#e1e2ed]">Quick Actions</h2>
+                </div>
                 <div className="space-y-2">
-                  {[
-                    { label: "Create New Scenario", icon: "➕", link: "/admin/scenarios/create", desc: "Build an AI-powered incident" },
-                    { label: "Manage Users", icon: "👥", link: "/admin/users", desc: "Add or edit player accounts" },
-                    { label: "Assign Labs", icon: "📋", link: "/admin/labs", desc: "Assign scenarios to players" },
-                  ].map((item) => (
-                    <Link key={item.label} to={item.link} className="flex items-center gap-3 p-3 rounded-lg hover:bg-[#21262d] border border-[#21262d] hover:border-[#30363d] transition-colors">
-                      <span className="text-xl">{item.icon}</span>
-                      <div>
-                        <p className="text-sm font-medium text-[#e6edf3]">{item.label}</p>
-                        <p className="text-xs text-[#8b949e]">{item.desc}</p>
+                  {quickActions.map((item) => (
+                    <Link
+                      key={item.label}
+                      to={item.link}
+                      data-testid={`quick-action-${item.label.toLowerCase().replace(/\s/g, "-")}`}
+                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-[#282a32] border border-[#434655] hover:border-[#b4c5ff]/30 transition-all group"
+                    >
+                      <div className="w-10 h-10 rounded-lg bg-[#2563eb]/15 ring-1 ring-[#2563eb]/30 flex items-center justify-center flex-shrink-0 group-hover:bg-[#2563eb]/25 transition-colors">
+                        <Icon name={item.icon} className="text-xl text-[#b4c5ff]" />
                       </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-[#e1e2ed]">{item.label}</p>
+                        <p className="text-xs text-[#8d90a0]">{item.desc}</p>
+                      </div>
+                      <Icon name="chevron_right" className="text-lg text-[#8d90a0] group-hover:text-[#b4c5ff] transition-colors" />
                     </Link>
                   ))}
                 </div>

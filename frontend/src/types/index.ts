@@ -111,3 +111,65 @@ export interface Score {
   feedback?: string;
   created_at: string;
 }
+
+export interface SocTool {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  public_url: string;
+  status: "online" | "offline";
+  detail: string;
+}
+
+export interface MitreTactic {
+  id?: string;
+  name: string;
+  shortname: string;
+}
+
+export interface MitreTechnique {
+  id: string;
+  stix_id?: string;
+  name: string;
+  description: string;
+  tactics: string[];
+  platforms: string[];
+  data_sources: string[];
+  is_subtechnique: boolean;
+  url?: string;
+}
+
+export interface ModeratorAnalysis {
+  title: string;
+  executive_summary: string;
+  attack_description: string;
+  attack_flow: Array<{
+    order: number;
+    phase: string;
+    action: string;
+    mitre_id?: string;
+    evidence: string;
+  }>;
+  simulation_plan: {
+    assets: string[];
+    events: Array<{
+      source: string;
+      event_type: string;
+      description: string;
+      mitre_id?: string;
+      malicious_count: number;
+      normal_count: number;
+    }>;
+    artifacts: string[];
+    alerts: string[];
+    investigation_questions: string[];
+    containment_actions: string[];
+  };
+  recommended_mitre_ids: string[];
+  assumptions: string[];
+  safety_notes: string[];
+  sources: Array<{ url: string; title: string; character_count: number }>;
+  source_errors: Array<{ url: string; error: string }>;
+  analysis_mode: string;
+}
