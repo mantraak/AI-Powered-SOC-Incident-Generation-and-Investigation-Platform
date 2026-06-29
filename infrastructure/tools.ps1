@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [ValidateSet('init', 'start', 'stop', 'status', 'logs', 'pull', 'scan')]
+    [ValidateSet('init', 'start', 'stop', 'status', 'logs', 'follow', 'pull', 'scan')]
     [string]$Action = 'status',
 
     [ValidateSet('all', 'wazuh', 'misp', 'thehive', 'monitoring', 'security')]
@@ -36,6 +36,17 @@ function Invoke-Compose([string[]]$Arguments) {
     }
 }
 
+function Initialize-ToolsNetwork {
+    & docker network inspect ai-soc-tools *> $null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host 'Creating shared application/tool network...'
+        & docker network create ai-soc-tools | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            throw 'Unable to create the ai-soc-tools Docker network.'
+        }
+    }
+}
+
 function Initialize-WazuhCertificates {
     $rootCa = Join-Path $root 'wazuh\certs\root-ca.pem'
     if (-not (Test-Path -LiteralPath $rootCa)) {
@@ -46,11 +57,13 @@ function Initialize-WazuhCertificates {
 
 switch ($Action) {
     'init' {
+        Initialize-ToolsNetwork
         if ($Tool -in @('all', 'wazuh')) { Initialize-WazuhCertificates }
         Invoke-Compose ($profileArgs + @('config', '--quiet'))
         Write-Host 'Tool configuration is ready.'
     }
     'start' {
+        Initialize-ToolsNetwork
         if ($Tool -in @('all', 'wazuh')) { Initialize-WazuhCertificates }
         Invoke-Compose ($profileArgs + @('up', '-d'))
         Invoke-Compose ($profileArgs + @('ps'))
@@ -62,6 +75,9 @@ switch ($Action) {
         Invoke-Compose ($profileArgs + @('ps', '--all'))
     }
     'logs' {
+        Invoke-Compose ($profileArgs + @('logs', '--tail', '200'))
+    }
+    'follow' {
         Invoke-Compose ($profileArgs + @('logs', '--tail', '200', '-f'))
     }
     'pull' {

@@ -178,6 +178,58 @@ Compose profiles. See [infrastructure/README.md](infrastructure/README.md) for
 requirements, startup commands, credentials and the backend integration
 contract.
 
+### MITRE ATT&CK catalogue
+
+The application uses a pinned local copy of Enterprise ATT&CK 19.1. On the
+first application start, the `mitre-sync` container downloads the official
+STIX 2.1 collection and stores a compact searchable catalogue in the
+`mitre_data` Docker volume. The backend validates both administrator-selected
+and AI-generated technique IDs against this catalogue.
+
+Administrators can search by technique ID, name, description, or tactic from
+the scenario creation page. Authenticated API endpoints are available under:
+
+```text
+GET /api/v1/mitre/metadata
+GET /api/v1/mitre/tactics
+GET /api/v1/mitre/techniques
+GET /api/v1/mitre/techniques/{technique_id}
+```
+
+To deliberately refresh the pinned catalogue:
+
+```bash
+MITRE_FORCE_SYNC=true docker compose --project-directory . \
+  -f infrastructure/docker-compose.yml run --rm mitre-sync
+```
+
+### AI Moderator
+
+Administrators can open **AI Moderator** in the sidebar and submit up to four
+public cyber-incident article links, select MITRE ATT&CK techniques, or use
+MITRE techniques alone. It produces an attack narrative, ATT&CK-aligned flow,
+fictional assets, synthetic log/event counts, alerts, artifacts, investigation
+questions, containment actions, assumptions, and safety notes.
+
+Click **Create scenario draft** to carry the reviewed flow and log plan into the
+normal scenario generator. The feature creates inert training data; it does not
+execute attack tools or malware. Private/internal URLs and non-standard ports
+are blocked.
+
+Configure NVIDIA from **Admin > AI Settings** after signing in. Enter the chat
+completions endpoint, model identifier, and a newly generated API key, then use
+**Test saved connection**. The key is encrypted in the database and is never
+returned to the browser.
+
+For unattended deployment, the environment fallback is:
+
+```bash
+export NVIDIA_API_KEY='your-new-rotated-key'
+export AI_API_ENDPOINT='https://integrate.api.nvidia.com/v1/chat/completions'
+export AI_MODEL='meta/llama-3.3-70b-instruct'
+docker compose --project-directory . -f infrastructure/docker-compose.yml up -d --build
+```
+
 ---
 
 ## Security

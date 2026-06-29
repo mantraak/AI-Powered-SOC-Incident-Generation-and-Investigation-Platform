@@ -54,7 +54,7 @@ echo "  Frontend PID: $FRONTEND_PID  →  http://localhost:5173"
 # ── Wait ───────────────────────────────────────────────────────────
 echo ""
 echo "✅ Both services running."
-echo "   Admin login: admin@soc.local / Admin@1234"
+echo "   Admin login: admin@aisocplatform.dev / Admin@1234"
 echo ""
 echo "Press Ctrl+C to stop."
 

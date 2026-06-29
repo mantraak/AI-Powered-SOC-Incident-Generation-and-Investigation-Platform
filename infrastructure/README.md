@@ -10,7 +10,7 @@ named volume.
 |---|---|---|
 | `wazuh` | Wazuh manager, indexer and dashboard | <https://localhost:8443> |
 | `misp` | MISP, MISP modules, MariaDB and Valkey | <https://localhost:10443> |
-| `thehive` | TheHive, Cassandra and Elasticsearch | <http://localhost:9000> |
+| `thehive` | TheHive, Cassandra and Elasticsearch | <http://localhost:9000/thehive> |
 | `monitoring` | Prometheus, Blackbox Exporter and Grafana | <http://localhost:3001> |
 | `security` | Semgrep, Gitleaks and Trivy (on-demand) | CLI reports |
 
@@ -30,6 +30,48 @@ Install Docker Desktop with the WSL 2 backend, then run from the repository root
 ./infrastructure/tools.cmd start thehive
 ./infrastructure/tools.cmd start monitoring
 ```
+
+The `init` command also creates the shared `ai-soc-tools` Docker network used by
+the application backend. Initialize the tools before starting the main
+application Compose stack.
+
+After signing in as an administrator, open **SOC Tools** in the sidebar to see
+live availability and launch each web interface.
+
+## Start from WSL
+
+Enable Docker Desktop integration for your WSL distribution, or install Docker
+Engine and the Compose plugin inside WSL. From the repository root run:
+
+```bash
+bash infrastructure/tools.sh init all
+bash infrastructure/tools.sh start all
+docker compose --project-directory . -f infrastructure/docker-compose.yml up -d --build
+```
+
+Open <http://localhost> in the Windows browser. Docker Desktop forwards the
+published WSL container ports to Windows automatically.
+
+Useful WSL commands:
+
+```bash
+bash infrastructure/tools.sh status all
+bash infrastructure/tools.sh logs wazuh
+bash infrastructure/tools.sh follow wazuh
+bash infrastructure/tools.sh stop all
+```
+
+If an earlier Wazuh start was stuck on `wazuh-security-init`, run the start
+command again after pulling these changes:
+
+```bash
+bash infrastructure/tools.sh start wazuh
+bash infrastructure/tools.sh status wazuh
+```
+
+The launcher now recreates the one-shot security initializer, checks WSL's
+`vm.max_map_count`, and runs OpenSearch security initialization on transport
+port 9300. It does not delete the Wazuh data volume.
 
 `init` creates `infrastructure/.env.tools` and generates the Wazuh TLS
 certificates. Edit that file and replace every `ChangeMe`/development secret
@@ -62,11 +104,16 @@ infrastructure/docker-compose.tools.yml down --volumes` manually.
 
 ## First logins
 
-- Wazuh: `admin` / the value of `WAZUH_INDEXER_PASSWORD`.
-- MISP: values from `MISP_ADMIN_EMAIL` and `MISP_ADMIN_PASSWORD`.
-- TheHive: first-run account `admin@thehive.local` / `secret`; immediately
-  create the lab organization/users and change the password.
-- Grafana: values from `GRAFANA_ADMIN_USER` and `GRAFANA_ADMIN_PASSWORD`.
+| Application | URL | Development username | Development password |
+|---|---|---|---|
+| AI SOC | <http://localhost> | `admin@aisocplatform.dev` | `Admin@1234` |
+| Wazuh | <https://localhost:8443> | `admin` | `SecretPassword` |
+| MISP | <https://localhost:10443> | `admin@admin.test` | `ChangeMe-MISP-2026!` |
+| TheHive | <http://localhost:9000/thehive> | `admin@thehive.local` | `secret` |
+| Grafana | <http://localhost:3001> | `admin` | `ChangeMe-Grafana-2026!` |
+| Prometheus | <http://localhost:9090> | No authentication | No authentication |
+
+Immediately change these credentials before sharing or exposing the stack.
 
 Self-signed TLS warnings are expected for local Wazuh and MISP.
 

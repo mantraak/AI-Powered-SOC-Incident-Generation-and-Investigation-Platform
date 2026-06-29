@@ -10,3 +10,4 @@ from app.models.player_answer import PlayerAnswer
 from app.models.containment import ContainmentAction
 from app.models.score import PlayerScore
 from app.models.lab import PlayerLab
+from app.models.ai_setting import AISetting
