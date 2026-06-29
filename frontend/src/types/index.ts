@@ -111,3 +111,13 @@ export interface Score {
   feedback?: string;
   created_at: string;
 }
+
+export interface SocTool {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  public_url: string;
+  status: "online" | "offline";
+  detail: string;
+}

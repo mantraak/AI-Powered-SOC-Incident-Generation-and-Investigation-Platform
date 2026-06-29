@@ -17,21 +17,33 @@ Base.metadata.create_all(bind=engine)
 from app.models.user import User
 from app.core.security import get_password_hash
 
+ADMIN_EMAIL = "admin@aisocplatform.dev"
+LEGACY_ADMIN_EMAIL = "admin@soc.local"
+ADMIN_PASSWORD = "Admin@1234"
+
 db = SessionLocal()
 try:
-    existing = db.query(User).filter(User.email == "admin@soc.local").first()
+    existing = db.query(User).filter(User.email == ADMIN_EMAIL).first()
     if not existing:
-        admin = User(
-            email="admin@soc.local",
-            full_name="Platform Admin",
-            hashed_password=get_password_hash("Admin@1234"),
-            role="admin",
-            is_active=True,
-        )
-        db.add(admin)
+        legacy_admin = db.query(User).filter(User.email == LEGACY_ADMIN_EMAIL).first()
+        if legacy_admin:
+            legacy_admin.email = ADMIN_EMAIL
+            legacy_admin.hashed_password = get_password_hash(ADMIN_PASSWORD)
+            legacy_admin.role = "admin"
+            legacy_admin.is_active = True
+            print(f"✅ Admin user migrated: {LEGACY_ADMIN_EMAIL} → {ADMIN_EMAIL}")
+        else:
+            admin = User(
+                email=ADMIN_EMAIL,
+                full_name="Platform Admin",
+                hashed_password=get_password_hash(ADMIN_PASSWORD),
+                role="admin",
+                is_active=True,
+            )
+            db.add(admin)
+            print(f"✅ Admin user created: {ADMIN_EMAIL} / {ADMIN_PASSWORD}")
         db.commit()
-        print("✅ Admin user created: admin@soc.local / Admin@1234")
     else:
-        print("ℹ️  Admin user already exists.")
+        print(f"ℹ️  Admin user already exists: {ADMIN_EMAIL}")
 finally:
     db.close()

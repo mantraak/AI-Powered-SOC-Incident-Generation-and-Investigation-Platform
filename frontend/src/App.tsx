@@ -9,6 +9,7 @@ import { AdminDashboard } from "./pages/admin/AdminDashboard";
 import { AdminScenariosPage, CreateScenarioPage, ScenarioDetailPage } from "./pages/admin/ScenarioPages";
 import { AdminUsersPage } from "./pages/admin/UsersPage";
 import { AdminLabsPage } from "./pages/admin/LabsPage";
+import { AdminToolsPage } from "./pages/admin/ToolsPage";
 
 // Player pages
 import { PlayerDashboard } from "./pages/player/PlayerDashboard";
@@ -46,6 +47,7 @@ export default function App() {
           <Route path="/admin/scenarios/:id" element={<ProtectedRoute role="admin"><ScenarioDetailPage /></ProtectedRoute>} />
           <Route path="/admin/users" element={<ProtectedRoute role="admin"><AdminUsersPage /></ProtectedRoute>} />
           <Route path="/admin/labs" element={<ProtectedRoute role="admin"><AdminLabsPage /></ProtectedRoute>} />
+          <Route path="/admin/tools" element={<ProtectedRoute role="admin"><AdminToolsPage /></ProtectedRoute>} />
 
           {/* Player routes */}
           <Route path="/player/dashboard" element={<ProtectedRoute><PlayerDashboard /></ProtectedRoute>} />

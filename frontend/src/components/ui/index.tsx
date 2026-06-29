@@ -1,6 +1,14 @@
 import React from "react";
 
-export function Badge({ children, color = "blue" }: { children: React.ReactNode; color?: string }) {
+export function Badge({
+  children,
+  color = "blue",
+  className = "",
+}: {
+  children: React.ReactNode;
+  color?: string;
+  className?: string;
+}) {
   const colors: Record<string, string> = {
     blue: "bg-blue-900/40 text-blue-300 border border-blue-700",
     green: "bg-green-900/40 text-green-300 border border-green-700",
@@ -11,7 +19,7 @@ export function Badge({ children, color = "blue" }: { children: React.ReactNode;
     cyan: "bg-cyan-900/40 text-cyan-300 border border-cyan-700",
   };
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${colors[color] || colors.gray}`}>
+    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${colors[color] || colors.gray} ${className}`}>
       {children}
     </span>
   );

@@ -7,6 +7,7 @@ const adminNav = [
   { path: "/admin/scenarios", label: "Scenarios", icon: "🎯" },
   { path: "/admin/users", label: "Users", icon: "👥" },
   { path: "/admin/labs", label: "Labs", icon: "🧪" },
+  { path: "/admin/tools", label: "SOC Tools", icon: "T" },
 ];
 
 const playerNav = [

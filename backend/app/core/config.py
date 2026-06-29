@@ -17,6 +17,18 @@ class Settings(BaseSettings):
 
     ANTHROPIC_API_KEY: Optional[str] = None
 
+    WAZUH_API_URL: str = "https://wazuh.manager:55000"
+    MISP_URL: str = "https://misp"
+    THEHIVE_URL: str = "http://thehive:9000"
+    GRAFANA_URL: str = "http://grafana:3000"
+    PROMETHEUS_URL: str = "http://prometheus:9090"
+
+    WAZUH_PUBLIC_URL: str = "https://localhost:8443"
+    MISP_PUBLIC_URL: str = "https://localhost:10443"
+    THEHIVE_PUBLIC_URL: str = "http://localhost:9000"
+    GRAFANA_PUBLIC_URL: str = "http://localhost:3001"
+    PROMETHEUS_PUBLIC_URL: str = "http://localhost:9090"
+
     class Config:
         env_file = ".env"
         extra = "ignore"

@@ -6,6 +6,8 @@ alembic==1.13.1
 pydantic==2.7.1
 pydantic-settings==2.2.1
 python-jose[cryptography]==3.3.0
+# Passlib 1.7.4 relies on bcrypt's pre-4.1 backend/version behavior.
+bcrypt==4.0.1
 passlib[bcrypt]==1.7.4
 python-multipart==0.0.9
 redis==5.0.4
