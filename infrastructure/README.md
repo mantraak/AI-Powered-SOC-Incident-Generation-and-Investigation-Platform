@@ -10,7 +10,7 @@ named volume.
 |---|---|---|
 | `wazuh` | Wazuh manager, indexer and dashboard | <https://localhost:8443> |
 | `misp` | MISP, MISP modules, MariaDB and Valkey | <https://localhost:10443> |
-| `thehive` | TheHive, Cassandra and Elasticsearch | <http://localhost:9000> |
+| `thehive` | TheHive, Cassandra and Elasticsearch | <http://localhost:9000/thehive> |
 | `monitoring` | Prometheus, Blackbox Exporter and Grafana | <http://localhost:3001> |
 | `security` | Semgrep, Gitleaks and Trivy (on-demand) | CLI reports |
 
@@ -61,6 +61,18 @@ bash infrastructure/tools.sh follow wazuh
 bash infrastructure/tools.sh stop all
 ```
 
+If an earlier Wazuh start was stuck on `wazuh-security-init`, run the start
+command again after pulling these changes:
+
+```bash
+bash infrastructure/tools.sh start wazuh
+bash infrastructure/tools.sh status wazuh
+```
+
+The launcher now recreates the one-shot security initializer, checks WSL's
+`vm.max_map_count`, and runs OpenSearch security initialization on transport
+port 9300. It does not delete the Wazuh data volume.
+
 `init` creates `infrastructure/.env.tools` and generates the Wazuh TLS
 certificates. Edit that file and replace every `ChangeMe`/development secret
 before starting a shared environment.
@@ -97,7 +109,7 @@ infrastructure/docker-compose.tools.yml down --volumes` manually.
 | AI SOC | <http://localhost> | `admin@aisocplatform.dev` | `Admin@1234` |
 | Wazuh | <https://localhost:8443> | `admin` | `SecretPassword` |
 | MISP | <https://localhost:10443> | `admin@admin.test` | `ChangeMe-MISP-2026!` |
-| TheHive | <http://localhost:9000> | `admin@thehive.local` | `secret` |
+| TheHive | <http://localhost:9000/thehive> | `admin@thehive.local` | `secret` |
 | Grafana | <http://localhost:3001> | `admin` | `ChangeMe-Grafana-2026!` |
 | Prometheus | <http://localhost:9090> | No authentication | No authentication |
 

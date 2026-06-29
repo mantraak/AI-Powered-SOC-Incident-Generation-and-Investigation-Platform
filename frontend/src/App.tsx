@@ -10,6 +10,8 @@ import { AdminScenariosPage, CreateScenarioPage, ScenarioDetailPage } from "./pa
 import { AdminUsersPage } from "./pages/admin/UsersPage";
 import { AdminLabsPage } from "./pages/admin/LabsPage";
 import { AdminToolsPage } from "./pages/admin/ToolsPage";
+import { ModeratorPage } from "./pages/admin/ModeratorPage";
+import { AISettingsPage } from "./pages/admin/AISettingsPage";
 
 // Player pages
 import { PlayerDashboard } from "./pages/player/PlayerDashboard";
@@ -48,6 +50,8 @@ export default function App() {
           <Route path="/admin/users" element={<ProtectedRoute role="admin"><AdminUsersPage /></ProtectedRoute>} />
           <Route path="/admin/labs" element={<ProtectedRoute role="admin"><AdminLabsPage /></ProtectedRoute>} />
           <Route path="/admin/tools" element={<ProtectedRoute role="admin"><AdminToolsPage /></ProtectedRoute>} />
+          <Route path="/admin/moderator" element={<ProtectedRoute role="admin"><ModeratorPage /></ProtectedRoute>} />
+          <Route path="/admin/ai-settings" element={<ProtectedRoute role="admin"><AISettingsPage /></ProtectedRoute>} />
 
           {/* Player routes */}
           <Route path="/player/dashboard" element={<ProtectedRoute><PlayerDashboard /></ProtectedRoute>} />

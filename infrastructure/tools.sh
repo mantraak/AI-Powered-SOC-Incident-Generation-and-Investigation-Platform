@@ -56,11 +56,31 @@ initialize_wazuh_certificates() {
   fi
 }
 
+ensure_wazuh_kernel_settings() {
+  local current
+  current="$(sysctl -n vm.max_map_count 2>/dev/null || echo 0)"
+  if (( current >= 262144 )); then
+    return
+  fi
+  if (( EUID == 0 )); then
+    echo "Setting vm.max_map_count=262144 for the Wazuh indexer..."
+    sysctl -w vm.max_map_count=262144 >/dev/null
+    return
+  fi
+  echo "Wazuh requires vm.max_map_count=262144 (current: $current)." >&2
+  echo "Run: sudo sysctl -w vm.max_map_count=262144" >&2
+  exit 1
+}
+
 case "$ACTION" in
   init)
     ensure_network
     if [[ "$TOOL" == "all" || "$TOOL" == "wazuh" ]]; then
       initialize_wazuh_certificates
+      ensure_wazuh_kernel_settings
+      # The initializer is intentionally one-shot. Recreate it so a previous
+      # failed or stale container cannot leave Compose waiting forever.
+      "${compose[@]}" --profile wazuh rm -sf wazuh-security-init >/dev/null 2>&1 || true
     fi
     "${compose[@]}" "${profile_args[@]}" config --quiet
     echo "Tool configuration is ready."

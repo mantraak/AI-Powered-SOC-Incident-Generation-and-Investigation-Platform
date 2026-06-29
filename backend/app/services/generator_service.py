@@ -1,22 +1,20 @@
 """
 AI Scenario Generation Service.
 
-Calls Anthropic Claude to produce a complete incident scenario JSON,
-then persists the results to the database.
+Calls the administrator-configured OpenAI-compatible provider to produce a
+complete incident scenario JSON, then persists the results to the database.
 
-If ANTHROPIC_API_KEY is not set the function falls back to a built-in
-demo scenario so the rest of the application remains fully runnable
-without API credentials.
+If no AI key is configured, the function falls back to a built-in demo
+scenario so the rest of the application remains runnable.
 """
 
-import json
-import re
 import logging
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from app.db.session import SessionLocal
-from app.core.config import settings
 from app.models.scenario import Scenario
+from app.services.ai_provider import call_ai, get_ai_config, parse_json_content
+from app.services.mitre_service import collect_generated_ids, mitre_catalog
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +34,7 @@ DESCRIPTION: {scenario.description or "Not provided"}
 DIFFICULTY: {scenario.difficulty}
 MITRE TECHNIQUES: {', '.join(scenario.mitre_techniques or []) or 'Choose appropriate techniques'}
 IOCs: {', '.join(scenario.iocs or []) or 'Generate realistic IOCs'}
-ARTICLE / CONTEXT: {(scenario.article_text or '')[:3000]}
+ARTICLE / MODERATOR PLAN: {(scenario.article_text or '')[:10000]}
 
 Return a JSON object with EXACTLY this structure:
 {{
@@ -102,6 +100,8 @@ Rules:
 - question_type must be one of: text, multiple_choice, ip_domain, mitre, timeline, summary.
 - For multiple_choice questions include 4 choices and set correct_answer to the correct one.
 - containment_actions is_correct: "positive" (correct action), "negative" (wrong/harmful), "neutral".
+- When an AI Moderator plan is present, implement its attack flow and synthetic log plan faithfully.
+- Never emit executable malware or exploit code; represent adversary behavior as inert training evidence.
 """
 
 
@@ -246,31 +246,18 @@ def _demo_scenario():
 
 # ── Main generation function ───────────────────────────────────────────────────
 
-def _call_anthropic(prompt: str) -> dict:
-    """Call Anthropic API and return parsed scenario dict."""
-    import httpx
-
-    response = httpx.post(
-        "https://api.anthropic.com/v1/messages",
-        headers={
-            "x-api-key": settings.ANTHROPIC_API_KEY,
-            "anthropic-version": "2023-06-01",
-            "content-type": "application/json",
-        },
-        json={
-            "model": "claude-sonnet-4-6",
-            "max_tokens": 8192,
-            "system": SYSTEM_PROMPT,
-            "messages": [{"role": "user", "content": prompt}],
-        },
-        timeout=120.0,
+def _call_provider(prompt: str, db: Session) -> dict:
+    """Call the configured OpenAI-compatible provider and parse scenario JSON."""
+    config = get_ai_config(db)
+    content = call_ai(
+        config,
+        [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": prompt},
+        ],
+        max_tokens=8192,
     )
-    response.raise_for_status()
-    content = response.json()["content"][0]["text"]
-    # Strip any accidental markdown fences
-    content = re.sub(r"^```json\s*", "", content.strip())
-    content = re.sub(r"\s*```$", "", content.strip())
-    return json.loads(content)
+    return parse_json_content(content)
 
 
 def _persist_scenario_data(db: Session, scenario: Scenario, data: dict):
@@ -283,6 +270,11 @@ def _persist_scenario_data(db: Session, scenario: Scenario, data: dict):
     from app.models.question import Question
     from app.models.containment import ContainmentAction
 
+    generated_mitre_ids = collect_generated_ids(data)
+    invalid_mitre_ids = mitre_catalog.invalid_ids(generated_mitre_ids)
+    if invalid_mitre_ids:
+        raise ValueError(f"AI generated invalid MITRE ATT&CK IDs: {', '.join(invalid_mitre_ids)}")
+
     # Purge any existing generated data for this scenario
     for model in [ScenarioEvent, ScenarioArtifact, Indicator, Alert, Question, ContainmentAction]:
         db.query(model).filter(model.scenario_id == scenario.id).delete()
@@ -292,6 +284,7 @@ def _persist_scenario_data(db: Session, scenario: Scenario, data: dict):
     scenario.assets = data.get("assets", [])
     scenario.attack_steps = data.get("attack_steps", [])
     scenario.timeline = data.get("timeline", [])
+    scenario.mitre_techniques = generated_mitre_ids
 
     # Events
     for e in data.get("events", []):
@@ -391,14 +384,13 @@ def run_ai_generation(scenario_id: int):
         scenario.status = "generating"
         db.commit()
 
-        if settings.ANTHROPIC_API_KEY:
-            logger.info(f"Calling Anthropic API for scenario {scenario_id}")
+        ai_config = get_ai_config(db)
+        if ai_config.api_key:
+            logger.info(f"Calling configured AI provider for scenario {scenario_id}")
             prompt = _build_user_prompt(scenario)
-            data = _call_anthropic(prompt)
+            data = _call_provider(prompt, db)
         else:
-            logger.warning(
-                f"ANTHROPIC_API_KEY not set – using built-in demo scenario for {scenario_id}"
-            )
+            logger.warning(f"AI API key not configured; using demo scenario for {scenario_id}")
             data = _demo_scenario()
 
         _persist_scenario_data(db, scenario, data)

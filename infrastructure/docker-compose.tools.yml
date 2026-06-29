@@ -50,16 +50,28 @@ services:
       WAZUH_INDEXER_PASSWORD: ${WAZUH_INDEXER_PASSWORD:-SecretPassword}
     command:
       - |
-        until curl -ks https://wazuh.indexer:9200 >/dev/null; do sleep 5; done
-        if curl -ksf -u "admin:$${WAZUH_INDEXER_PASSWORD}" https://wazuh.indexer:9200/_cluster/health >/dev/null; then
+        ready=false
+        for readiness_attempt in {1..60}; do
+          if curl -ks --connect-timeout 2 --max-time 5 https://localhost:9200 >/dev/null; then
+            ready=true
+            break
+          fi
+          echo "Waiting for Wazuh indexer ($${readiness_attempt}/60)..."
+          sleep 5
+        done
+        if [ "$${ready}" != "true" ]; then
+          echo "Wazuh indexer did not expose HTTPS within 5 minutes."
+          exit 1
+        fi
+        if curl -ksf --connect-timeout 2 --max-time 5 -u "admin:$${WAZUH_INDEXER_PASSWORD}" https://localhost:9200/_cluster/health >/dev/null; then
           echo "Wazuh security index is already initialized."
           exit 0
         fi
         export JAVA_HOME=/usr/share/wazuh-indexer/jdk
-        for attempt in {1..12}; do
-          if bash /usr/share/wazuh-indexer/plugins/opensearch-security/tools/securityadmin.sh \
+        for attempt in {1..5}; do
+          if timeout 60s bash /usr/share/wazuh-indexer/plugins/opensearch-security/tools/securityadmin.sh \
             -cd /usr/share/wazuh-indexer/config/opensearch-security/ \
-            -icl -nhnv -h wazuh.indexer -p 9200 \
+            -icl -nhnv -h localhost -p 9300 \
             -cacert /usr/share/wazuh-indexer/config/certs/root-ca.pem \
             -cert /usr/share/wazuh-indexer/config/certs/admin.pem \
             -key /usr/share/wazuh-indexer/config/certs/admin-key.pem; then
@@ -74,7 +86,7 @@ services:
       - ./wazuh/certs/admin.pem:/usr/share/wazuh-indexer/config/certs/admin.pem:ro
       - ./wazuh/certs/admin-key.pem:/usr/share/wazuh-indexer/config/certs/admin-key.pem:ro
       - ./wazuh/indexer/internal_users.yml:/usr/share/wazuh-indexer/config/opensearch-security/internal_users.yml:ro
-    networks: [soc-tools]
+    network_mode: "service:wazuh-indexer"
     depends_on:
       wazuh-indexer:
         condition: service_started
@@ -118,8 +130,6 @@ services:
       soc-tools:
         aliases: [wazuh.manager]
     depends_on:
-      wazuh-indexer:
-        condition: service_healthy
       wazuh-security-init:
         condition: service_completed_successfully
 
@@ -149,8 +159,6 @@ services:
       soc-tools:
         aliases: [wazuh.dashboard]
     depends_on:
-      wazuh-indexer:
-        condition: service_healthy
       wazuh-security-init:
         condition: service_completed_successfully
       wazuh-manager:
@@ -275,19 +283,50 @@ services:
       timeout: 5s
       retries: 20
 
+  thehive-storage-init:
+    image: alpine:3.22
+    profiles: [thehive]
+    restart: "no"
+    user: "0:0"
+    command: ["sh", "-c", "chown -R 1000:1000 /thehive-files && chmod 750 /thehive-files"]
+    volumes:
+      - thehive-files:/thehive-files
+
   thehive:
     image: strangebee/thehive:${THEHIVE_VERSION:-5.7.3}
     profiles: [thehive]
     restart: unless-stopped
-    command: --no-config --no-config-secret
+    command:
+      - --secret
+      - ${THEHIVE_SECRET:-change-me-to-a-random-string-at-least-32-characters}
+      - --cql-hostnames
+      - thehive-cassandra
+      - --cql-username
+      - cassandra
+      - --cql-password
+      - cassandra
+      - --cql-datacenter
+      - datacenter1
+      - --cql-keyspace
+      - thehive
+      - --es-hostnames
+      - thehive-elasticsearch
+      - --es-username
+      - elastic
+      - --es-password
+      - ${THEHIVE_ES_PASSWORD:-ChangeMe-TheHive-ES-2026}
+      - --es-index
+      - thehive
+      - --storage-directory
+      - /opt/thp/thehive/files
+      - --cluster-min-nodes-count
+      - "1"
+      - --no-config-cortex
     environment:
       JAVA_OPTS: -Xms1g -Xmx1g -XX:MaxMetaspaceSize=400m
-      THEHIVE_SECRET: ${THEHIVE_SECRET:-change-me-to-a-random-string-at-least-32-characters}
-      THEHIVE_ES_PASSWORD: ${THEHIVE_ES_PASSWORD:-ChangeMe-TheHive-ES-2026}
     ports:
       - "${THEHIVE_PORT:-9000}:9000"
     volumes:
-      - ./thehive:/etc/thehive:ro
       - thehive-files:/opt/thp/thehive/files
     networks:
       soc-tools:
@@ -295,6 +334,7 @@ services:
     depends_on:
       thehive-cassandra: {condition: service_healthy}
       thehive-elasticsearch: {condition: service_healthy}
+      thehive-storage-init: {condition: service_completed_successfully}
     healthcheck:
       test: [CMD-SHELL, "curl -fsS http://localhost:9000/thehive/api/status >/dev/null || exit 1"]
       start_period: 90s

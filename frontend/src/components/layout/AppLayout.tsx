@@ -8,6 +8,8 @@ const adminNav = [
   { path: "/admin/users", label: "Users", icon: "👥" },
   { path: "/admin/labs", label: "Labs", icon: "🧪" },
   { path: "/admin/tools", label: "SOC Tools", icon: "T" },
+  { path: "/admin/moderator", label: "AI Moderator", icon: "AI" },
+  { path: "/admin/ai-settings", label: "AI Settings", icon: "K" },
 ];
 
 const playerNav = [

@@ -7,8 +7,21 @@ from app.models.scenario import Scenario
 from app.models.user import User
 from app.schemas.scenario import ScenarioCreate, ScenarioUpdate, ScenarioOut
 from app.services.generator_service import run_ai_generation
+from app.services.mitre_service import MitreDataUnavailable, mitre_catalog
 
 router = APIRouter()
+
+
+def validate_mitre_ids(technique_ids: List[str]):
+    try:
+        invalid = mitre_catalog.invalid_ids(technique_ids)
+    except MitreDataUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    if invalid:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid MITRE ATT&CK technique IDs: {', '.join(invalid)}",
+        )
 
 
 @router.get("/", response_model=List[ScenarioOut])
@@ -22,6 +35,7 @@ def create_scenario(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin),
 ):
+    validate_mitre_ids(scenario_in.mitre_techniques or [])
     scenario = Scenario(**scenario_in.model_dump(), created_by=current_user.id)
     db.add(scenario)
     db.commit()
@@ -51,6 +65,8 @@ def update_scenario(
     scenario = db.query(Scenario).filter(Scenario.id == scenario_id).first()
     if not scenario:
         raise HTTPException(status_code=404, detail="Scenario not found")
+    if update.mitre_techniques is not None:
+        validate_mitre_ids(update.mitre_techniques)
     for field, value in update.model_dump(exclude_unset=True).items():
         setattr(scenario, field, value)
     db.commit()

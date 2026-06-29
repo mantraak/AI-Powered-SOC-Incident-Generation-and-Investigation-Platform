@@ -4,6 +4,7 @@ import { AppLayout, PageHeader } from "../../components/layout/AppLayout";
 import { Card, Button, StatusBadge, DifficultyBadge, Spinner, EmptyState, Input } from "../../components/ui";
 import api from "../../api/client";
 import type { Scenario } from "../../types";
+import { MitreTechniqueSelector } from "../../components/mitre/MitreTechniqueSelector";
 
 // ─── Scenario List ────────────────────────────────────────────────────────────
 export function AdminScenariosPage() {
@@ -72,8 +73,9 @@ export function CreateScenarioPage() {
   const navigate = useNavigate();
   const [form, setForm] = useState({
     title: "", description: "", article_text: "",
-    mitre_techniques: "", iocs: "", difficulty: "intermediate", num_questions: "10",
+    iocs: "", difficulty: "intermediate", num_questions: "10",
   });
+  const [mitreTechniques, setMitreTechniques] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -86,7 +88,7 @@ export function CreateScenarioPage() {
     try {
       const payload = {
         ...form,
-        mitre_techniques: form.mitre_techniques.split(",").map((s) => s.trim()).filter(Boolean),
+        mitre_techniques: mitreTechniques,
         iocs: form.iocs.split(",").map((s) => s.trim()).filter(Boolean),
         num_questions: parseInt(form.num_questions),
       };
@@ -130,12 +132,7 @@ export function CreateScenarioPage() {
                   className="w-full bg-[#0d1117] border border-[#30363d] rounded-md px-3 py-2 text-sm text-[#e6edf3] placeholder-[#484f58] focus:outline-none focus:border-cyan-500" />
               </div>
 
-              <div>
-                <label className="block text-xs text-[#8b949e] font-medium mb-1">MITRE ATT&CK Techniques (comma-separated)</label>
-                <input name="mitre_techniques" value={form.mitre_techniques} onChange={handleChange}
-                  placeholder="T1566.001, T1059.001, T1003.001, T1041"
-                  className="w-full bg-[#0d1117] border border-[#30363d] rounded-md px-3 py-2 text-sm text-[#e6edf3] placeholder-[#484f58] focus:outline-none focus:border-cyan-500" />
-              </div>
+              <MitreTechniqueSelector value={mitreTechniques} onChange={setMitreTechniques} />
 
               <div>
                 <label className="block text-xs text-[#8b949e] font-medium mb-1">Indicators of Compromise (comma-separated)</label>
