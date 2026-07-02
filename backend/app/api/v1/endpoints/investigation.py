@@ -11,6 +11,9 @@ from app.models.indicator import Indicator
 from app.models.question import Question
 from app.models.containment import ContainmentAction
 from app.models.user import User
+from app.models.traffic import ScenarioTraffic
+from app.models.trace import ScenarioTrace
+from app.models.lab import PlayerLab
 
 router = APIRouter()
 
@@ -19,8 +22,15 @@ def _check_scenario_access(scenario_id: int, db: Session, current_user: User):
     scenario = db.query(Scenario).filter(Scenario.id == scenario_id).first()
     if not scenario:
         raise HTTPException(status_code=404, detail="Scenario not found")
-    if current_user.role != "admin" and scenario.status != "published":
-        raise HTTPException(status_code=403, detail="Scenario not published")
+    if current_user.role != "admin":
+        assignment = db.query(PlayerLab).filter(
+            PlayerLab.scenario_id == scenario_id,
+            PlayerLab.player_id == current_user.id,
+        ).first()
+        if not assignment:
+            raise HTTPException(status_code=403, detail="Scenario is not assigned to this player")
+        if scenario.status != "published":
+            raise HTTPException(status_code=403, detail="Scenario not published")
     return scenario
 
 
@@ -46,6 +56,60 @@ def get_events(
             "event_data": e.event_data,
         })
     return result
+
+
+@router.get("/scenarios/{scenario_id}/traffic")
+def get_traffic(
+    scenario_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _check_scenario_access(scenario_id, db, current_user)
+    flows = db.query(ScenarioTraffic).filter(
+        ScenarioTraffic.scenario_id == scenario_id
+    ).order_by(ScenarioTraffic.timestamp).all()
+    return [{
+        "id": flow.id,
+        "src_ip": flow.src_ip,
+        "dst_ip": flow.dst_ip,
+        "src_port": flow.src_port,
+        "dst_port": flow.dst_port,
+        "protocol": flow.protocol,
+        "packets": flow.packets,
+        "bytes": flow.bytes,
+        "direction": flow.direction,
+        "summary": flow.summary,
+        "mitre_id": flow.mitre_id,
+        "is_malicious": flow.is_malicious,
+        "timestamp": flow.timestamp.isoformat() if flow.timestamp else None,
+        "flow_data": flow.flow_data,
+    } for flow in flows]
+
+
+@router.get("/scenarios/{scenario_id}/traces")
+def get_traces(
+    scenario_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _check_scenario_access(scenario_id, db, current_user)
+    traces = db.query(ScenarioTrace).filter(
+        ScenarioTrace.scenario_id == scenario_id
+    ).order_by(ScenarioTrace.timestamp).all()
+    return [{
+        "id": trace.id,
+        "trace_type": trace.trace_type,
+        "host": trace.host,
+        "process_name": trace.process_name,
+        "parent_process": trace.parent_process,
+        "command_line": trace.command_line,
+        "network_target": trace.network_target,
+        "summary": trace.summary,
+        "mitre_id": trace.mitre_id,
+        "is_malicious": trace.is_malicious,
+        "timestamp": trace.timestamp.isoformat() if trace.timestamp else None,
+        "trace_data": trace.trace_data,
+    } for trace in traces]
 
 
 @router.get("/scenarios/{scenario_id}/artifacts")

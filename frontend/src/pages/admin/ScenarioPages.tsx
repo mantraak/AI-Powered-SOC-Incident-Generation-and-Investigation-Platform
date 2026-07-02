@@ -237,7 +237,8 @@ export function ScenarioDetailPage() {
   const [scenario, setScenario] = useState<Scenario | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
-  const [tab, setTab] = useState<"overview" | "timeline" | "attack" | "assets">("overview");
+  const [tab, setTab] = useState<"overview" | "timeline" | "attack" | "assets" | "evidence">("overview");
+  const [evidence, setEvidence] = useState<{ events: any[]; traffic: any[]; traces: any[]; artifacts: any[] }>({ events: [], traffic: [], traces: [], artifacts: [] });
 
   const load = async () => {
     const res = await api.get(`/scenarios/${id}`);
@@ -246,6 +247,16 @@ export function ScenarioDetailPage() {
   };
 
   useEffect(() => { load(); }, [id]);
+
+  useEffect(() => {
+    if (!scenario || !["ready", "generated", "published"].includes(scenario.status)) return;
+    Promise.all([
+      api.get(`/investigation/scenarios/${id}/events`),
+      api.get(`/investigation/scenarios/${id}/traffic`),
+      api.get(`/investigation/scenarios/${id}/traces`),
+      api.get(`/investigation/scenarios/${id}/artifacts`),
+    ]).then(([events, traffic, traces, artifacts]) => setEvidence({ events: events.data, traffic: traffic.data, traces: traces.data, artifacts: artifacts.data }));
+  }, [id, scenario?.status]);
 
   // Poll while generating
   useEffect(() => {
@@ -279,6 +290,7 @@ export function ScenarioDetailPage() {
     { key: "timeline", label: "Timeline",      icon: "schedule"     },
     { key: "attack",   label: "Attack Steps",  icon: "stairs"       },
     { key: "assets",   label: "Assets",        icon: "dns"          },
+    { key: "evidence", label: "Evidence",      icon: "travel_explore" },
   ];
 
   return (
@@ -446,6 +458,26 @@ export function ScenarioDetailPage() {
               </div>
             ) : <EmptyState icon="dns" title="No assets defined" description="Generate the scenario to see affected assets" />}
           </Card>
+        )}
+
+        {tab === "evidence" && (
+          <div className="space-y-5">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              {[['Logs & events', evidence.events.length, 'monitor_heart'], ['Traffic flows', evidence.traffic.length, 'lan'], ['Traces', evidence.traces.length, 'account_tree'], ['Artifacts', evidence.artifacts.length, 'folder_zip']].map(([label, count, icon]) => (
+                <Card key={String(label)}><Icon name={String(icon)} className="text-xl text-[#b4c5ff]" /><p className="text-2xl font-bold text-[#e1e2ed] mt-3">{String(count)}</p><p className="text-xs text-[#8d90a0] mt-1">{String(label)}</p></Card>
+              ))}
+            </div>
+            <Card>
+              <h3 className="text-sm font-semibold text-[#e1e2ed] mb-3">Generated evidence preview</h3>
+              {evidence.events.length + evidence.traffic.length + evidence.traces.length + evidence.artifacts.length === 0 ? <EmptyState icon="travel_explore" title="No evidence generated" description="Run AI generation to create logs, traffic, traces, and artifacts." /> : (
+                <div className="space-y-2">
+                  {evidence.events.slice(0, 5).map((item) => <div key={`event-${item.id}`} className="p-3 rounded-lg bg-[#0c0e16] border border-[#434655] text-xs"><Badge color="blue">event</Badge><span className="ml-2 text-[#c3c6d7] font-mono">{item.host}</span><p className="mt-1 text-[#e1e2ed]">{item.message}</p></div>)}
+                  {evidence.traffic.slice(0, 3).map((item) => <div key={`flow-${item.id}`} className="p-3 rounded-lg bg-[#0c0e16] border border-[#434655] text-xs"><Badge color="cyan">traffic</Badge><span className="ml-2 text-[#b4c5ff] font-mono">{item.src_ip}:{item.src_port} → {item.dst_ip}:{item.dst_port}</span><p className="mt-1 text-[#c3c6d7]">{item.summary}</p></div>)}
+                  {evidence.traces.slice(0, 3).map((item) => <div key={`trace-${item.id}`} className="p-3 rounded-lg bg-[#0c0e16] border border-[#434655] text-xs"><Badge color="purple">trace</Badge><span className="ml-2 text-[#e1e2ed]">{item.host} · {item.process_name}</span><p className="mt-1 text-[#c3c6d7]">{item.summary}</p></div>)}
+                </div>
+              )}
+            </Card>
+          </div>
         )}
       </div>
     </AppLayout>

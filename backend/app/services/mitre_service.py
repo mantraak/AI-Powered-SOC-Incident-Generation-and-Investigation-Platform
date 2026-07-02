@@ -75,10 +75,9 @@ def collect_generated_ids(data: dict) -> list[str]:
         value = step.get("technique") or step.get("mitre_id")
         if value:
             ids.add(value.strip().upper())
-    for collection in ("timeline", "events", "indicators", "alerts"):
+    for collection in ("timeline", "events", "traffic", "traces", "indicators", "alerts"):
         for item in data.get(collection, []):
             value = item.get("mitre_id")
             if value:
                 ids.add(value.strip().upper())
     return sorted(ids)
-

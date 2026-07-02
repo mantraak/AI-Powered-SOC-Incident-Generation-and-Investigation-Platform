@@ -97,7 +97,7 @@ export function Card({
 }) {
   return (
     <div
-      className={`bg-[#1d1f27] border border-[#434655] rounded-[14px] p-5 ${className}`}
+      className={`bg-[#1d1f27]/95 border border-[#434655] rounded-2xl p-5 shadow-[0_18px_45px_-32px_rgba(0,0,0,0.95)] ${className}`}
     >
       {children}
     </div>
@@ -139,7 +139,7 @@ export function Button({
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className={`inline-flex items-center justify-center rounded-md font-semibold transition-all duration-150
+      className={`inline-flex items-center justify-center rounded-lg font-semibold transition-all duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b4c5ff]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#11131b]
         ${variants[variant]} ${sizes[size]}
         ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
         ${className}`}
@@ -170,7 +170,7 @@ export function Input({
   rows?: number;
 }) {
   const cls =
-    "w-full bg-[#0c0e16] border border-[#434655] rounded-[10px] px-3 py-2 text-sm text-[#e1e2ed] placeholder-[#8d90a0] focus:outline-none focus:border-[#b4c5ff] focus:ring-2 focus:ring-[#b4c5ff]/20 transition-colors";
+    "w-full bg-[#0c0e16] border border-[#434655] rounded-[10px] px-3 py-2.5 text-sm text-[#e1e2ed] placeholder-[#8d90a0] focus:outline-none focus:border-[#b4c5ff] focus:ring-2 focus:ring-[#b4c5ff]/20 transition-all";
   return (
     <div className="flex flex-col gap-1.5">
       <label className="text-[11px] font-semibold text-[#8d90a0] uppercase tracking-wider">

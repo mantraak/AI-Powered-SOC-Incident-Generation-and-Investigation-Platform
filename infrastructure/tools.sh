@@ -89,6 +89,8 @@ case "$ACTION" in
     ensure_network
     if [[ "$TOOL" == "all" || "$TOOL" == "wazuh" ]]; then
       initialize_wazuh_certificates
+      ensure_wazuh_kernel_settings
+      "${compose[@]}" --profile wazuh rm -sf wazuh-security-init >/dev/null 2>&1 || true
     fi
     "${compose[@]}" "${profile_args[@]}" up -d
     "${compose[@]}" "${profile_args[@]}" ps

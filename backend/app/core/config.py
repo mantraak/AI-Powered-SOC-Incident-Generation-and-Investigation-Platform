@@ -3,7 +3,7 @@ from typing import Optional
 
 
 class Settings(BaseSettings):
-    APP_NAME: str = "AI SOC Platform"
+    APP_NAME: str = "Romulus"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = True
 
@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     MODERATOR_MAX_DOWNLOAD_BYTES: int = 2_000_000
 
     WAZUH_API_URL: str = "https://wazuh.manager:55000"
+    WAZUH_INDEXER_URL: str = "https://wazuh.indexer:9200"
+    WAZUH_INDEXER_USERNAME: str = "admin"
+    WAZUH_INDEXER_PASSWORD: str = "SecretPassword"
     MISP_URL: str = "https://misp"
     THEHIVE_URL: str = "http://thehive:9000"
     GRAFANA_URL: str = "http://grafana:3000"

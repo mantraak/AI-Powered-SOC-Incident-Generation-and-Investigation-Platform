@@ -10,8 +10,11 @@ interface Artifact { id: number; name: string; artifact_type: string; host: stri
 interface Alert { id: number; title: string; severity: string; description: string; mitre_id?: string; rule_name?: string; }
 interface Indicator { id: number; ioc_type: string; value: string; description: string; mitre_id?: string; }
 interface ContainmentOption { id: number; action_type: string; target: string; description: string; }
+interface TrafficFlow { id: number; src_ip: string; dst_ip: string; src_port?: number; dst_port?: number; protocol: string; packets: number; bytes: number; direction?: string; summary?: string; mitre_id?: string; is_malicious: boolean; timestamp?: string; }
+interface Trace { id: number; trace_type: string; host: string; process_name?: string; parent_process?: string; command_line?: string; network_target?: string; summary?: string; mitre_id?: string; is_malicious: boolean; timestamp?: string; }
+interface Workspace { workspace_id: string; status: string; required_tools: string[]; detail?: string; tools: Record<string, { username: string; password: string; url: string; tenant?: string; index?: string }>; }
 
-type Tab = "briefing" | "events" | "artifacts" | "alerts" | "indicators" | "questions" | "containment" | "score";
+type Tab = "briefing" | "tools" | "events" | "traffic" | "traces" | "artifacts" | "alerts" | "indicators" | "questions" | "containment" | "score";
 
 /* ════════════════════════ Tab button ════════════════════════ */
 function TabBtn({
@@ -58,6 +61,9 @@ export function LabInvestigationPage() {
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [indicators, setIndicators] = useState<Indicator[]>([]);
+  const [traffic, setTraffic] = useState<TrafficFlow[]>([]);
+  const [traces, setTraces] = useState<Trace[]>([]);
+  const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [containmentOptions, setContainmentOptions] = useState<ContainmentOption[]>([]);
   const [answers, setAnswers] = useState<Record<number, string>>({});
@@ -81,8 +87,10 @@ export function LabInvestigationPage() {
       setScenario(scenarioRes.data);
 
       const sid = labData.scenario_id;
-      const [evRes, arRes, alRes, inRes, qRes, caRes] = await Promise.all([
+      const [evRes, trafficRes, tracesRes, arRes, alRes, inRes, qRes, caRes] = await Promise.all([
         api.get(`/investigation/scenarios/${sid}/events`),
+        api.get(`/investigation/scenarios/${sid}/traffic`),
+        api.get(`/investigation/scenarios/${sid}/traces`),
         api.get(`/investigation/scenarios/${sid}/artifacts`),
         api.get(`/investigation/scenarios/${sid}/alerts`),
         api.get(`/investigation/scenarios/${sid}/indicators`),
@@ -90,11 +98,19 @@ export function LabInvestigationPage() {
         api.get(`/investigation/scenarios/${sid}/containment-actions`),
       ]);
       setEvents(evRes.data);
+      setTraffic(trafficRes.data);
+      setTraces(tracesRes.data);
       setArtifacts(arRes.data);
       setAlerts(alRes.data);
       setIndicators(inRes.data);
       setQuestions(qRes.data);
       setContainmentOptions(caRes.data);
+      try {
+        const workspaceRes = await api.get(`/labs/${labId}/workspace`);
+        setWorkspace(workspaceRes.data);
+      } catch (workspaceError) {
+        console.error(workspaceError);
+      }
 
       if (labData.status === "evaluated") {
         const [answersRes, scoreRes] = await Promise.all([
@@ -165,8 +181,11 @@ export function LabInvestigationPage() {
 
   const tabConfig: { key: Tab; label: string; icon: string; count?: number }[] = [
     { key: "briefing",    label: "Briefing",    icon: "menu_book"        },
+    { key: "tools",       label: "Lab Tools",   icon: "construction", count: workspace ? Object.keys(workspace.tools).length : 0 },
     { key: "alerts",      label: "Alerts",      icon: "notifications_active", count: alerts.length     },
     { key: "events",      label: "Events",      icon: "monitor_heart",        count: events.length     },
+    { key: "traffic",     label: "Traffic",     icon: "lan",                  count: traffic.length    },
+    { key: "traces",      label: "Traces",      icon: "account_tree",         count: traces.length     },
     { key: "indicators",  label: "IOCs",        icon: "fingerprint",          count: indicators.length },
     { key: "artifacts",   label: "Artifacts",   icon: "folder_zip",           count: artifacts.length  },
     { key: "questions",   label: "Questions",   icon: "quiz",                 count: questions.length  },
@@ -259,6 +278,24 @@ export function LabInvestigationPage() {
         )}
 
         {/* ── Alerts ── */}
+        {tab === "tools" && (
+          !workspace ? <EmptyState icon="construction" title="Workspace unavailable" description="The isolated lab workspace is still being prepared." /> : (
+            <div className="space-y-4">
+              <Card>
+                <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs text-[#8d90a0] uppercase tracking-wider">Isolated workspace</p><p className="text-lg font-mono text-[#b4c5ff] mt-1">{workspace.workspace_id}</p></div><Badge color={workspace.status === "ready" ? "green" : "yellow"}>{workspace.status}</Badge></div>
+                <p className="text-xs text-[#8d90a0] mt-3">Evidence, saved searches, answers and scores are scoped to this assignment and cannot be accessed by another player.</p>
+                {workspace.detail && <p className="text-xs text-[#ffb4ab] mt-2">{workspace.detail}</p>}
+              </Card>
+              {Object.entries(workspace.tools).map(([name, tool]) => (
+                <Card key={name}>
+                  <div className="flex flex-wrap items-start justify-between gap-4"><div><div className="flex items-center gap-2"><Icon name="shield_lock" className="text-[#b4c5ff]" /><h3 className="font-semibold text-[#e1e2ed] capitalize">{name}</h3></div><p className="text-xs text-[#8d90a0] mt-1">Dedicated tenant credentials for this lab only</p></div><Button onClick={() => window.open(tool.url, '_blank', 'noopener,noreferrer')}><Icon name="open_in_new" className="text-base" /> Open {name}</Button></div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4 p-3 rounded-lg bg-[#0c0e16] border border-[#434655] text-xs font-mono"><p className="text-[#8d90a0]">Username<br/><span className="text-[#b4c5ff] select-all">{tool.username}</span></p><p className="text-[#8d90a0]">Password<br/><span className="text-[#6ee7b7] select-all break-all">{tool.password}</span></p>{tool.index && <p className="text-[#8d90a0] md:col-span-2">Evidence index<br/><span className="text-[#c3c6d7] select-all">{tool.index}</span></p>}</div>
+                </Card>
+              ))}
+            </div>
+          )
+        )}
+
         {tab === "alerts" && (
           alerts.length === 0
             ? <EmptyState icon="notifications_active" title="No alerts generated" description="Generate the scenario first." />
@@ -343,6 +380,30 @@ export function LabInvestigationPage() {
         )}
 
         {/* ── Indicators ── */}
+        {tab === "traffic" && (
+          traffic.length === 0 ? <EmptyState icon="lan" title="No network traffic" description="Generate the scenario to create synthetic flow records." /> : (
+            <Card className="p-0 overflow-hidden"><div className="overflow-x-auto"><table className="w-full text-xs">
+              <thead><tr className="bg-[#0c0e16] border-b border-[#434655] text-[#8d90a0]">{['Time', 'Source', 'Destination', 'Protocol', 'Packets', 'Bytes', 'Finding'].map((h) => <th key={h} className="text-left py-3 px-4 font-semibold uppercase tracking-wider">{h}</th>)}</tr></thead>
+              <tbody>{traffic.map((flow) => <tr key={flow.id} className="border-b border-[#434655]/50 last:border-0">
+                <td className="py-3 px-4 text-[#8d90a0] font-mono">{flow.timestamp ? new Date(flow.timestamp).toLocaleTimeString() : '-'}</td>
+                <td className="py-3 px-4 text-[#c3c6d7] font-mono">{flow.src_ip}:{flow.src_port || '*'}</td>
+                <td className="py-3 px-4 text-[#b4c5ff] font-mono">{flow.dst_ip}:{flow.dst_port || '*'}</td>
+                <td className="py-3 px-4"><Badge color="gray">{flow.protocol}</Badge></td><td className="py-3 px-4 font-mono">{flow.packets}</td><td className="py-3 px-4 font-mono">{flow.bytes}</td>
+                <td className="py-3 px-4"><span className={flow.is_malicious ? "text-[#ffb4ab]" : "text-[#6ee7b7]"}>{flow.summary || (flow.is_malicious ? 'Suspicious' : 'Normal')}</span>{flow.mitre_id && <div className="mt-1"><Badge color="purple">{flow.mitre_id}</Badge></div>}</td>
+              </tr>)}</tbody>
+            </table></div></Card>
+          )
+        )}
+
+        {tab === "traces" && (
+          traces.length === 0 ? <EmptyState icon="account_tree" title="No execution traces" description="Generate the scenario to create correlated traces." /> : (
+            <div className="space-y-3">{traces.map((trace) => <Card key={trace.id} className={trace.is_malicious ? "border-[#93000a]/50" : ""}>
+              <div className="flex flex-wrap items-start justify-between gap-3"><div><div className="flex items-center gap-2 mb-2"><Icon name="account_tree" className="text-[#b4c5ff]" /><span className="font-semibold text-[#e1e2ed]">{trace.host} · {trace.trace_type}</span>{trace.mitre_id && <Badge color="purple">{trace.mitre_id}</Badge>}</div><p className="text-sm text-[#c3c6d7]">{trace.summary}</p></div><Badge color={trace.is_malicious ? "red" : "green"}>{trace.is_malicious ? "suspicious" : "normal"}</Badge></div>
+              <div className="mt-3 p-3 rounded-lg bg-[#0c0e16] border border-[#434655] text-xs font-mono text-[#8d90a0] space-y-1"><p>parent: <span className="text-[#c3c6d7]">{trace.parent_process || '-'}</span> → process: <span className="text-[#e1e2ed]">{trace.process_name || '-'}</span></p>{trace.command_line && <p>command: <span className="text-[#c3c6d7]">{trace.command_line}</span></p>}{trace.network_target && <p>target: <span className="text-[#b4c5ff]">{trace.network_target}</span></p>}</div>
+            </Card>)}</div>
+          )
+        )}
+
         {tab === "indicators" && (
           indicators.length === 0
             ? <EmptyState icon="fingerprint" title="No IOCs" description="Generate the scenario first." />

@@ -8,6 +8,7 @@ from app.models.user import User
 from app.schemas.scenario import ScenarioCreate, ScenarioUpdate, ScenarioOut
 from app.services.generator_service import run_ai_generation
 from app.services.mitre_service import MitreDataUnavailable, mitre_catalog
+from app.models.lab import PlayerLab
 
 router = APIRouter()
 
@@ -52,6 +53,13 @@ def get_scenario(
     scenario = db.query(Scenario).filter(Scenario.id == scenario_id).first()
     if not scenario:
         raise HTTPException(status_code=404, detail="Scenario not found")
+    if current_user.role != "admin":
+        assignment = db.query(PlayerLab).filter(
+            PlayerLab.scenario_id == scenario_id,
+            PlayerLab.player_id == current_user.id,
+        ).first()
+        if not assignment:
+            raise HTTPException(status_code=403, detail="Scenario is not assigned to this player")
     return scenario
 
 

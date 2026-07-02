@@ -13,7 +13,7 @@ function AuthShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-sentinel-glow flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-romulus-glow flex items-center justify-center p-4 relative overflow-hidden">
       {/* decorative grid */}
       <div
         className="absolute inset-0 pointer-events-none opacity-[0.04]"
@@ -28,7 +28,7 @@ function AuthShell({
           <div className="inline-flex items-center justify-center w-16 h-16 bg-[#2563eb]/15 border border-[#b4c5ff]/30 rounded-2xl mb-4">
             <Icon name="shield_person" filled className="text-3xl text-[#b4c5ff]" />
           </div>
-          <h1 className="text-3xl font-bold text-[#e1e2ed] tracking-tight">SENTINEL AI</h1>
+          <h1 className="text-3xl font-bold text-[#e1e2ed] tracking-tight">ROMULUS</h1>
           <p className="text-sm text-[#8d90a0] mt-1.5">{subheading}</p>
         </div>
 

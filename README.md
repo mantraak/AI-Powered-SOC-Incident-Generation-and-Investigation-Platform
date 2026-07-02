@@ -1,4 +1,4 @@
-# AI-Powered SOC Incident Generation & Investigation Platform
+# Romulus
 
 An AI-driven Security Operations Center (SOC) training platform that automatically generates realistic cybersecurity incidents and provides an end-to-end investigation environment using industry-standard security tools.
 
@@ -119,7 +119,7 @@ The platform enables administrators to create incident scenarios from natural la
 ## Project Structure
 
 ```text
-ai-soc-platform/
+romulus/
 │
 ├── backend/
 │   ├── api/

@@ -85,7 +85,7 @@ def sync_catalog() -> Path:
     destination.parent.mkdir(parents=True, exist_ok=True)
     request = urllib.request.Request(
         settings.MITRE_STIX_URL,
-        headers={"User-Agent": "ai-soc-platform-mitre-sync/1.0"},
+        headers={"User-Agent": "romulus-mitre-sync/1.0"},
     )
     print(f"Downloading MITRE ATT&CK {settings.MITRE_ATTACK_VERSION}...")
     with urllib.request.urlopen(request, timeout=120) as response:
@@ -110,4 +110,3 @@ def sync_catalog() -> Path:
 
 if __name__ == "__main__":
     sync_catalog()
-

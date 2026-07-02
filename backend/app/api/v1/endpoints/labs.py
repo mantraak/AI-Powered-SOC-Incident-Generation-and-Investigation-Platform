@@ -14,6 +14,7 @@ from app.models.containment import ContainmentAction
 from app.models.score import PlayerScore
 from app.schemas.lab import LabOut, LabAssign, AnswerSubmit, AnswerOut, ContainmentSubmit, ScoreOut
 from app.evaluators.answer_evaluator import evaluate_answer
+from app.services.workspace_service import provision_lab_workspace, workspace_payload
 
 router = APIRouter()
 
@@ -37,6 +38,7 @@ def assign_lab(
     db.add(lab)
     db.commit()
     db.refresh(lab)
+    provision_lab_workspace(db, lab)
     return lab
 
 
@@ -58,6 +60,21 @@ def get_lab(lab_id: int, db: Session = Depends(get_db), current_user: User = Dep
     if current_user.role != "admin" and lab.player_id != current_user.id:
         raise HTTPException(status_code=403, detail="Access denied")
     return lab
+
+
+@router.get("/{lab_id}/workspace")
+def get_lab_workspace(
+    lab_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_player),
+):
+    lab = db.query(PlayerLab).filter(PlayerLab.id == lab_id).first()
+    if not lab:
+        raise HTTPException(status_code=404, detail="Lab not found")
+    if current_user.role != "admin" and lab.player_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    workspace = provision_lab_workspace(db, lab)
+    return workspace_payload(workspace, reveal_credentials=True)
 
 
 @router.post("/{lab_id}/start")
@@ -86,7 +103,7 @@ def submit_answer(
         raise HTTPException(status_code=400, detail="Lab not active")
 
     question = db.query(Question).filter(Question.id == answer.question_id).first()
-    if not question:
+    if not question or question.scenario_id != lab.scenario_id:
         raise HTTPException(status_code=404, detail="Question not found")
 
     # Evaluate answer
@@ -186,7 +203,42 @@ def submit_lab(lab_id: int, db: Session = Depends(get_db), current_user: User = 
 
 @router.get("/{lab_id}/score", response_model=ScoreOut)
 def get_score(lab_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_player)):
+    lab = db.query(PlayerLab).filter(PlayerLab.id == lab_id).first()
+    if not lab:
+        raise HTTPException(status_code=404, detail="Lab not found")
+    if current_user.role != "admin" and lab.player_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
     score = db.query(PlayerScore).filter(PlayerScore.lab_id == lab_id).first()
     if not score:
         raise HTTPException(status_code=404, detail="Score not found")
     return score
+
+
+@router.post("/{lab_id}/reset")
+def reset_lab(
+    lab_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin),
+):
+    """Reset one player's scenario attempt without altering generated evidence."""
+    lab = db.query(PlayerLab).filter(PlayerLab.id == lab_id).first()
+    if not lab:
+        raise HTTPException(status_code=404, detail="Lab not found")
+
+    answers_deleted = db.query(PlayerAnswer).filter(
+        PlayerAnswer.lab_id == lab_id
+    ).delete(synchronize_session=False)
+    scores_deleted = db.query(PlayerScore).filter(
+        PlayerScore.lab_id == lab_id
+    ).delete(synchronize_session=False)
+    lab.status = "assigned"
+    lab.started_at = None
+    lab.submitted_at = None
+    db.commit()
+    return {
+        "message": "Player scenario progress reset",
+        "lab_id": lab_id,
+        "status": lab.status,
+        "answers_deleted": answers_deleted,
+        "scores_deleted": scores_deleted,
+    }

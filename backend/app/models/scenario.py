@@ -42,6 +42,8 @@ class Scenario(TimestampMixin, Base):
     # Relationships
     events = relationship("ScenarioEvent", back_populates="scenario", cascade="all, delete")
     artifacts = relationship("ScenarioArtifact", back_populates="scenario", cascade="all, delete")
+    traffic = relationship("ScenarioTraffic", back_populates="scenario", cascade="all, delete")
+    traces = relationship("ScenarioTrace", back_populates="scenario", cascade="all, delete")
     indicators = relationship("Indicator", back_populates="scenario", cascade="all, delete")
     alerts = relationship("Alert", back_populates="scenario", cascade="all, delete")
     questions = relationship("Question", back_populates="scenario", cascade="all, delete")

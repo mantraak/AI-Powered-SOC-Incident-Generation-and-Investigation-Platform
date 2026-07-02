@@ -16,3 +16,4 @@ class PlayerLab(TimestampMixin, Base):
 
     player = relationship("User", back_populates="labs")
     scenario = relationship("Scenario", back_populates="labs")
+    workspace = relationship("LabWorkspace", back_populates="lab", uselist=False, cascade="all, delete-orphan")

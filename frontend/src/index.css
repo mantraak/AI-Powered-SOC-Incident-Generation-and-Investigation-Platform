@@ -2,7 +2,7 @@
 @import url('https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
 @import "tailwindcss";
 
-/* ───────────────────────────── Stitch SENTINEL design tokens ───────────────────────────── */
+/* ───────────────────────────── Romulus design tokens ───────────────────────────── */
 :root {
   --bg:                   #11131b;
   --surface:              #1d1f27;
@@ -33,12 +33,49 @@
 html, body, #root { height: 100%; }
 
 body {
-  background-color: var(--bg);
+  background:
+    radial-gradient(circle at 78% -10%, rgba(37, 99, 235, 0.12), transparent 34rem),
+    var(--bg);
   color: var(--on-surface);
   font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
   font-size: 14px;
   line-height: 20px;
   -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  color: #ffffff;
+  background: rgba(37, 99, 235, 0.65);
+}
+
+.app-workspace::before {
+  content: "";
+  position: fixed;
+  inset: 0 0 0 15rem;
+  pointer-events: none;
+  opacity: 0.22;
+  background-image:
+    linear-gradient(rgba(180, 197, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(180, 197, 255, 0.035) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: linear-gradient(to bottom, black, transparent 72%);
+}
+
+button, a, input, textarea, select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 1023px) {
+  .app-workspace::before { inset: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 code, pre, .font-mono { font-family: 'JetBrains Mono', monospace; }
@@ -60,14 +97,14 @@ code, pre, .font-mono { font-family: 'JetBrains Mono', monospace; }
 ::-webkit-scrollbar-thumb:hover { background: #8d90a0; }
 
 /* ───────────────────────────── Animations ───────────────────────────── */
-.node-pulse { animation: sentinelPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
-@keyframes sentinelPulse {
+.node-pulse { animation: romulusPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+@keyframes romulusPulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50%       { opacity: .55; transform: scale(1.15); }
 }
 
 /* Subtle radial background glow for auth/landing pages */
-.bg-sentinel-glow {
+.bg-romulus-glow {
   background:
     radial-gradient(ellipse 80% 60% at 50% 0%, rgba(37, 99, 235, 0.18), transparent 60%),
     radial-gradient(ellipse 60% 40% at 80% 100%, rgba(180, 197, 255, 0.08), transparent 70%),

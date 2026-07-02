@@ -70,8 +70,8 @@ bash infrastructure/tools.sh status wazuh
 ```
 
 The launcher now recreates the one-shot security initializer, checks WSL's
-`vm.max_map_count`, and runs OpenSearch security initialization on transport
-port 9300. It does not delete the Wazuh data volume.
+`vm.max_map_count`, and runs OpenSearch security initialization against its
+secured REST endpoint. It does not delete the Wazuh data volume.
 
 `init` creates `infrastructure/.env.tools` and generates the Wazuh TLS
 certificates. Edit that file and replace every `ChangeMe`/development secret
@@ -106,7 +106,7 @@ infrastructure/docker-compose.tools.yml down --volumes` manually.
 
 | Application | URL | Development username | Development password |
 |---|---|---|---|
-| AI SOC | <http://localhost> | `admin@aisocplatform.dev` | `Admin@1234` |
+| Romulus admin | <http://localhost> | `admin@aisocplatform.dev` | `Admin@1234` |
 | Wazuh | <https://localhost:8443> | `admin` | `SecretPassword` |
 | MISP | <https://localhost:10443> | `admin@admin.test` | `ChangeMe-MISP-2026!` |
 | TheHive | <http://localhost:9000/thehive> | `admin@thehive.local` | `secret` |
@@ -116,6 +116,40 @@ infrastructure/docker-compose.tools.yml down --volumes` manually.
 Immediately change these credentials before sharing or exposing the stack.
 
 Self-signed TLS warnings are expected for local Wazuh and MISP.
+
+## Scenario lifecycle
+
+1. Create a scenario manually, from incident links, or from MITRE ATT&CK.
+2. Run **Generate with AI**. Romulus creates synthetic logs/events, network
+   flows, correlated process/network traces, forensic artifacts, IOCs, alerts,
+   questions, and containment choices. It does not execute malware or transmit
+   the generated traffic.
+3. Review the **Evidence** tab and publish the scenario.
+4. Open **Labs**, assign the published scenario to a player, and let the player
+   investigate Events, Traffic, Traces, Artifacts, Alerts, and IOCs.
+5. Use **Reset** in the Labs table to delete that player's answers and score and
+   return the assignment to its initial state. Generated evidence is retained.
+
+## Player isolation
+
+Romulus uses lightweight tenant isolation instead of duplicating the SOC stack
+for every player:
+
+- Admin-created player accounts receive a cryptographically generated one-time
+  password. The password is shown once and only its bcrypt hash is stored.
+- Every lab assignment receives a random workspace ID, separate answers,
+  scores, progress state, and encrypted tool credentials.
+- Players are denied access to every scenario, answer set, score, and workspace
+  that is not assigned to their account.
+- The shared Wazuh cluster provisions a unique internal user, security role,
+  dashboard tenant, and `romulus-lab-<workspace>` evidence index per lab.
+- Players find only their required credentials and links under **Lab Tools**.
+  Generated passwords are encrypted at rest using Romulus `SECRET_KEY`.
+
+This design keeps one indexer/dashboard deployment while preventing one
+player's searches, dashboard objects, evidence, or progress from affecting
+another player's lab. Keep `SECRET_KEY` stable; changing it invalidates stored
+workspace credentials.
 
 ## Application integration contract
 

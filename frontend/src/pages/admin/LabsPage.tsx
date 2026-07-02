@@ -46,6 +46,17 @@ export function AdminLabsPage() {
   const getUserName = (id: number) => users.find((u) => u.id === id)?.full_name || `User #${id}`;
   const getScenarioTitle = (id: number) => scenarios.find((s) => s.id === id)?.title || `Scenario #${id}`;
 
+  const resetLab = async (lab: Lab) => {
+    if (!confirm(`Reset ${getUserName(lab.player_id)}'s progress for ${getScenarioTitle(lab.scenario_id)}?`)) return;
+    setError("");
+    try {
+      await api.post(`/labs/${lab.id}/reset`);
+      await load();
+    } catch (err: any) {
+      setError(err.response?.data?.detail || "Unable to reset the lab");
+    }
+  };
+
   return (
     <AppLayout>
       <div className="p-6 lg:p-8 max-w-7xl mx-auto">
@@ -124,7 +135,7 @@ export function AdminLabsPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-[#0c0e16] border-b border-[#434655]">
-                    {["Player", "Scenario", "Status", "Started", "Submitted"].map((h) => (
+                    {["Player", "Scenario", "Status", "Started", "Submitted", "Actions"].map((h) => (
                       <th key={h} className="text-left text-[11px] text-[#8d90a0] font-semibold py-3 px-4 uppercase tracking-wider">{h}</th>
                     ))}
                   </tr>
@@ -140,6 +151,11 @@ export function AdminLabsPage() {
                       </td>
                       <td className="py-3 px-4 text-[#8d90a0] text-xs font-mono">
                         {lab.submitted_at ? new Date(lab.submitted_at).toLocaleString() : "—"}
+                      </td>
+                      <td className="py-3 px-4">
+                        <Button variant="secondary" size="sm" onClick={() => resetLab(lab)}>
+                          <Icon name="restart_alt" className="text-sm" /> Reset
+                        </Button>
                       </td>
                     </tr>
                   ))}

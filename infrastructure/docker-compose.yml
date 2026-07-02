@@ -1,3 +1,5 @@
+name: romulus
+
 services:
   db:
     image: postgres:15-alpine
@@ -23,9 +25,23 @@ services:
       timeout: 5s
       retries: 5
 
+  mitre-sync:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: "no"
+    command: ["python", "-m", "app.services.mitre_sync"]
+    environment:
+      MITRE_ATTACK_VERSION: "19.1"
+      MITRE_STIX_URL: https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack-19.1.json
+      MITRE_CATALOG_PATH: /app/data/mitre/catalog.json
+      MITRE_FORCE_SYNC: ${MITRE_FORCE_SYNC:-false}
+    volumes:
+      - mitre_data:/app/data/mitre
+
   backend:
     build:
-      context: ../backend
+      context: ./backend
       dockerfile: Dockerfile
     restart: unless-stopped
     environment:
@@ -33,23 +49,49 @@ services:
       REDIS_URL: redis://redis:6379/0
       SECRET_KEY: ${SECRET_KEY:-ChangeThisInProduction!SecretKey42}
       ACCESS_TOKEN_EXPIRE_MINUTES: 480
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      NVIDIA_API_KEY: ${NVIDIA_API_KEY:-}
+      AI_API_ENDPOINT: ${AI_API_ENDPOINT:-https://integrate.api.nvidia.com/v1/chat/completions}
+      AI_MODEL: ${AI_MODEL:-meta/llama-3.3-70b-instruct}
+      WAZUH_INDEXER_URL: https://wazuh.indexer:9200
+      WAZUH_INDEXER_USERNAME: admin
+      WAZUH_INDEXER_PASSWORD: ${WAZUH_INDEXER_PASSWORD:-SecretPassword}
+      MITRE_ATTACK_VERSION: "19.1"
+      MITRE_CATALOG_PATH: /app/data/mitre/catalog.json
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
+      mitre-sync:
+        condition: service_completed_successfully
     volumes:
-      - ../backend:/app
+      - ./backend:/app
+      - mitre_data:/app/data/mitre:ro
     working_dir: /app
+    networks:
+      - default
+      - soc-tools
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
 
   frontend:
     build:
-      context: ../frontend
+      context: ./frontend
       dockerfile: Dockerfile
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
 
   nginx:
     image: nginx:alpine
@@ -57,10 +99,18 @@ services:
     ports:
       - "80:80"
     volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./infrastructure/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
-      - backend
-      - frontend
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
 
 volumes:
   postgres_data:
+  mitre_data:
+
+networks:
+  soc-tools:
+    external: true
+    name: ai-soc-tools

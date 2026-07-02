@@ -11,3 +11,6 @@ from app.models.containment import ContainmentAction
 from app.models.score import PlayerScore
 from app.models.lab import PlayerLab
 from app.models.ai_setting import AISetting
+from app.models.traffic import ScenarioTraffic
+from app.models.trace import ScenarioTrace
+from app.models.lab_workspace import LabWorkspace

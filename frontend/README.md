@@ -1,20 +1,19 @@
-# SENTINEL AI · SOC Command — Frontend
+# Romulus · SOC Command — Frontend
 
-> The original **AI-Powered SOC Incident Generation & Investigation Platform** frontend
-> re-skinned with the **Stitch SENTINEL AI** design language.
+> The **Romulus** frontend for AI-powered SOC incident generation and investigation.
 
 All application logic, routes, API calls, authentication, state management and
 component contracts are **unchanged** — only the visual layer was rebuilt.
 
 ## What changed
 
-| Area | Before | After (Stitch SENTINEL) |
+| Area | Before | After (Romulus) |
 |------|--------|-------------------------|
 | Palette | GitHub-dark cyan (`#0d1117` / cyan-500) | Stitch deep slate (`#11131b` / primary `#2563eb` / primary container `#b4c5ff`) |
 | Iconography | Emoji (🎯 🧪 📋 …) | **Google Material Symbols Outlined** |
 | Typography | system-ui | **Inter** for UI · **JetBrains Mono** for IPs, hashes, code |
 | Corners | `rounded-md` (6px) | Cards & inputs `14px` · buttons / pills `6–10px` |
-| Sidebar | Generic | Branded **SENTINEL AI · SOC Command** with workspace section header, active indicator (2px left border + 8 % tint) and user pod |
+| Sidebar | Generic | Branded **Romulus · SOC Command** with workspace section header, active indicator and user pod |
 | Tables | Mixed | Uppercase tracked-wide header on `#0c0e16` row, no vertical grid lines |
 | Badges | Solid | 15 % tint background with high-contrast same-hue text |
 | Cards | Flat | Tonal layering · subtle hover border `#b4c5ff/30` |

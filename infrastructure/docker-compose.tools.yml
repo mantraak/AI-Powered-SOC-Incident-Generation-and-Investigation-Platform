@@ -35,7 +35,7 @@ services:
       soc-tools:
         aliases: [wazuh.indexer]
     healthcheck:
-      test: [CMD-SHELL, "curl -ks -u admin:${WAZUH_INDEXER_PASSWORD:-SecretPassword} https://localhost:9200/_cluster/health >/dev/null || exit 1"]
+      test: [CMD-SHELL, "curl -ks -u admin:${WAZUH_INDEXER_PASSWORD:-SecretPassword} https://127.0.0.1:9200/_cluster/health >/dev/null || exit 1"]
       start_period: 60s
       interval: 15s
       timeout: 5s
@@ -52,7 +52,7 @@ services:
       - |
         ready=false
         for readiness_attempt in {1..60}; do
-          if curl -ks --connect-timeout 2 --max-time 5 https://localhost:9200 >/dev/null; then
+          if curl -ks --connect-timeout 2 --max-time 5 https://127.0.0.1:9200 >/dev/null; then
             ready=true
             break
           fi
@@ -63,7 +63,7 @@ services:
           echo "Wazuh indexer did not expose HTTPS within 5 minutes."
           exit 1
         fi
-        if curl -ksf --connect-timeout 2 --max-time 5 -u "admin:$${WAZUH_INDEXER_PASSWORD}" https://localhost:9200/_cluster/health >/dev/null; then
+        if curl -ksf --connect-timeout 2 --max-time 5 -u "admin:$${WAZUH_INDEXER_PASSWORD}" https://127.0.0.1:9200/_cluster/health >/dev/null; then
           echo "Wazuh security index is already initialized."
           exit 0
         fi
@@ -71,7 +71,7 @@ services:
         for attempt in {1..5}; do
           if timeout 60s bash /usr/share/wazuh-indexer/plugins/opensearch-security/tools/securityadmin.sh \
             -cd /usr/share/wazuh-indexer/config/opensearch-security/ \
-            -icl -nhnv -h localhost -p 9300 \
+            -icl -nhnv -h 127.0.0.1 -p 9200 \
             -cacert /usr/share/wazuh-indexer/config/certs/root-ca.pem \
             -cert /usr/share/wazuh-indexer/config/certs/admin.pem \
             -key /usr/share/wazuh-indexer/config/certs/admin-key.pem; then

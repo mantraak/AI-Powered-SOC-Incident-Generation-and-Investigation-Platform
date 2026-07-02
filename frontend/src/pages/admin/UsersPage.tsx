@@ -13,8 +13,9 @@ export function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm] = useState({ email: "", full_name: "", password: "", role: "player" });
+  const [form, setForm] = useState({ email: "", full_name: "", role: "player" });
   const [error, setError] = useState("");
+  const [generatedCredential, setGeneratedCredential] = useState<{ email: string; password: string } | null>(null);
 
   const load = () => api.get("/users/").then((r) => setUsers(r.data)).finally(() => setLoading(false));
   useEffect(() => { load(); }, []);
@@ -23,9 +24,10 @@ export function AdminUsersPage() {
     e.preventDefault();
     setError("");
     try {
-      await api.post("/auth/register", form);
+      const response = await api.post("/users/", form);
       setShowCreate(false);
-      setForm({ email: "", full_name: "", password: "", role: "player" });
+      setGeneratedCredential({ email: response.data.user.email, password: response.data.temporary_password });
+      setForm({ email: "", full_name: "", role: "player" });
       load();
     } catch (err: any) {
       setError(err.response?.data?.detail || "Failed to create user");
@@ -46,6 +48,12 @@ export function AdminUsersPage() {
     if (!confirm("Delete this user?")) return;
     await api.delete(`/users/${id}`);
     load();
+  };
+
+  const resetPassword = async (user: User) => {
+    if (!confirm(`Generate a new password for ${user.full_name}?`)) return;
+    const response = await api.post(`/users/${user.id}/reset-password`);
+    setGeneratedCredential({ email: user.email, password: response.data.temporary_password });
   };
 
   return (
@@ -82,7 +90,6 @@ export function AdminUsersPage() {
                 {[
                   { label: "Full Name", key: "full_name", type: "text" },
                   { label: "Email", key: "email", type: "email" },
-                  { label: "Password", key: "password", type: "password" },
                 ].map(({ label, key, type }) => (
                   <div key={key}>
                     <label className="text-[11px] text-[#8d90a0] font-semibold mb-1.5 block uppercase tracking-wider">{label}</label>
@@ -111,6 +118,20 @@ export function AdminUsersPage() {
                   <Button variant="secondary" onClick={() => setShowCreate(false)}>Cancel</Button>
                 </div>
               </form>
+            </Card>
+          </div>
+        )}
+
+        {generatedCredential && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <Card className="w-full max-w-md shadow-2xl">
+              <h2 className="text-base font-semibold text-[#e1e2ed] mb-2">One-time player credentials</h2>
+              <p className="text-xs text-[#8d90a0] mb-4">Copy this password now. It will not be shown again.</p>
+              <div className="p-3 bg-[#0c0e16] border border-[#434655] rounded-lg font-mono text-sm space-y-2">
+                <p className="text-[#c3c6d7]">Username: <span className="text-[#b4c5ff]">{generatedCredential.email}</span></p>
+                <p className="text-[#c3c6d7]">Password: <span className="text-[#6ee7b7] break-all">{generatedCredential.password}</span></p>
+              </div>
+              <Button className="mt-4" onClick={() => setGeneratedCredential(null)}>I copied it</Button>
             </Card>
           </div>
         )}
@@ -168,6 +189,7 @@ export function AdminUsersPage() {
                                 Make Admin
                               </button>
                             )}
+                            <button onClick={() => resetPassword(u)} className="text-xs px-2.5 py-1 rounded-md bg-[#282a32] hover:bg-[#32343d] border border-[#434655] text-[#c3c6d7] transition-colors">Reset Password</button>
                             <button
                               onClick={() => handleDelete(u.id)}
                               data-testid={`delete-user-${u.id}`}

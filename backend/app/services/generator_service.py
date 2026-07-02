@@ -8,6 +8,7 @@ If no AI key is configured, the function falls back to a built-in demo
 scenario so the rest of the application remains runnable.
 """
 
+import json
 import logging
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
@@ -27,12 +28,25 @@ Always respond with valid JSON only – no markdown fences, no preamble, no comm
 """
 
 def _build_user_prompt(scenario: Scenario) -> str:
+    technique_context = []
+    for technique_id in scenario.mitre_techniques or []:
+        technique = mitre_catalog.get(technique_id)
+        if technique:
+            technique_context.append({
+                "id": technique["id"],
+                "name": technique["name"],
+                "tactics": technique.get("tactics", []),
+                "platforms": technique.get("platforms", []),
+                "data_sources": technique.get("data_sources", []),
+                "description": technique.get("description", "")[:700],
+            })
     return f"""Generate a complete cybersecurity training scenario for the following incident.
 
 INCIDENT TITLE: {scenario.title}
 DESCRIPTION: {scenario.description or "Not provided"}
 DIFFICULTY: {scenario.difficulty}
 MITRE TECHNIQUES: {', '.join(scenario.mitre_techniques or []) or 'Choose appropriate techniques'}
+VALIDATED MITRE CONTEXT: {json.dumps(technique_context)}
 IOCs: {', '.join(scenario.iocs or []) or 'Generate realistic IOCs'}
 ARTICLE / MODERATOR PLAN: {(scenario.article_text or '')[:10000]}
 
@@ -58,6 +72,25 @@ Return a JSON object with EXACTLY this structure:
       "mitre_id": "T1059.001",
       "is_malicious": true,
       "timestamp": "2026-06-26T08:15:00Z"
+    }}
+  ],
+  "traffic": [
+    {{
+      "src_ip": "10.10.20.15", "dst_ip": "198.51.100.42",
+      "src_port": 53124, "dst_port": 443, "protocol": "TCP",
+      "packets": 18, "bytes": 9472, "direction": "outbound",
+      "summary": "Synthetic HTTPS beacon flow", "mitre_id": "T1071.001",
+      "is_malicious": true, "timestamp": "2026-06-26T08:16:00Z"
+    }}
+  ],
+  "traces": [
+    {{
+      "trace_type": "process", "host": "DEV-PC-01",
+      "process_name": "powershell.exe", "parent_process": "winword.exe",
+      "command_line": "inert training representation only",
+      "network_target": "198.51.100.42:443",
+      "summary": "Synthetic parent-child execution trace", "mitre_id": "T1059.001",
+      "is_malicious": true, "timestamp": "2026-06-26T08:15:00Z"
     }}
   ],
   "artifacts": [
@@ -92,8 +125,9 @@ Return a JSON object with EXACTLY this structure:
 }}
 
 Rules:
-- Generate 3-5 assets, 5-8 attack_steps, 40-60 events (mix malicious + normal), 3-5 artifacts,
-  5-8 indicators, 3-5 alerts, {scenario.num_questions or 10} questions, 3-5 containment_actions.
+- Generate 3-5 assets, one attack step per selected technique, 12-18 representative logs/events,
+  6-10 network traffic flows, 6-10 process/network traces, 3-5 artifacts,
+  5-8 indicators, 3-5 alerts, {scenario.num_questions or 10} questions, and 3-5 containment_actions.
 - Normal (non-malicious) events must have "is_malicious": false.
 - Use realistic but fictional hostnames, IPs (RFC 5737 / RFC 3849 ranges), usernames.
 - All timestamps in ISO 8601 format starting around 2026-06-26T08:00:00Z.
@@ -101,6 +135,9 @@ Rules:
 - For multiple_choice questions include 4 choices and set correct_answer to the correct one.
 - containment_actions is_correct: "positive" (correct action), "negative" (wrong/harmful), "neutral".
 - When an AI Moderator plan is present, implement its attack flow and synthetic log plan faithfully.
+- Every administrator-selected MITRE technique must appear in attack_steps, events, traces, alerts, and questions.
+- Do not introduce unrelated ATT&CK techniques in MITRE-only mode.
+- Keep descriptions concise so the JSON response is not truncated.
 - Never emit executable malware or exploit code; represent adversary behavior as inert training evidence.
 """
 
@@ -175,6 +212,17 @@ def _demo_scenario():
             {"timestamp": "2026-06-26T09:30:00Z", "event": "Data exfiltration (2.3 GB)", "host": "BUILD-SRV-01", "mitre_id": "T1048.002"},
         ],
         "events": events,
+        "traffic": [
+            {"src_ip": "10.10.20.15", "dst_ip": "198.51.100.42", "src_port": 53124, "dst_port": 443, "protocol": "TCP", "packets": 18, "bytes": 9472, "direction": "outbound", "summary": "Synthetic HTTPS beacon flow", "mitre_id": "T1071.001", "is_malicious": True, "timestamp": "2026-06-26T08:11:00Z"},
+            {"src_ip": "10.10.20.15", "dst_ip": "10.10.30.10", "src_port": 49820, "dst_port": 3389, "protocol": "TCP", "packets": 240, "bytes": 184320, "direction": "lateral", "summary": "Synthetic RDP session to build server", "mitre_id": "T1021.001", "is_malicious": True, "timestamp": "2026-06-26T08:35:00Z"},
+            {"src_ip": "10.10.30.10", "dst_ip": "203.0.113.77", "src_port": 51290, "dst_port": 443, "protocol": "TCP", "packets": 3220, "bytes": 24117248, "direction": "outbound", "summary": "Synthetic high-volume HTTPS transfer", "mitre_id": "T1048.002", "is_malicious": True, "timestamp": "2026-06-26T09:30:00Z"},
+            {"src_ip": "10.10.20.15", "dst_ip": "192.0.2.53", "src_port": 53001, "dst_port": 53, "protocol": "UDP", "packets": 2, "bytes": 180, "direction": "outbound", "summary": "Normal DNS lookup", "mitre_id": None, "is_malicious": False, "timestamp": "2026-06-26T08:08:00Z"},
+        ],
+        "traces": [
+            {"trace_type": "process", "host": "DEV-PC-01", "process_name": "powershell.exe", "parent_process": "winword.exe", "command_line": "[inert encoded-command simulation]", "network_target": "198.51.100.42:443", "summary": "Office process spawned a synthetic command interpreter trace", "mitre_id": "T1059.001", "is_malicious": True, "timestamp": "2026-06-26T08:10:00Z"},
+            {"trace_type": "network", "host": "DEV-PC-01", "process_name": "powershell.exe", "parent_process": "winword.exe", "command_line": "[redacted training command]", "network_target": "198.51.100.42:443", "summary": "Synthetic process-to-network correlation", "mitre_id": "T1071.001", "is_malicious": True, "timestamp": "2026-06-26T08:11:00Z"},
+            {"trace_type": "authentication", "host": "BUILD-SRV-01", "process_name": "svchost.exe", "parent_process": "services.exe", "command_line": "TermService", "network_target": "10.10.20.15", "summary": "Synthetic remote logon trace", "mitre_id": "T1021.001", "is_malicious": True, "timestamp": "2026-06-26T08:35:00Z"},
+        ],
         "artifacts": [
             {
                 "name": "PowerShell History",
@@ -246,6 +294,134 @@ def _demo_scenario():
 
 # ── Main generation function ───────────────────────────────────────────────────
 
+def _mitre_scenario(scenario: Scenario) -> dict:
+    """Build a compact, valid scenario directly from selected ATT&CK techniques."""
+    selected = [mitre_catalog.get(value) for value in (scenario.mitre_techniques or [])]
+    selected = [item for item in selected if item]
+    if not selected:
+        return _demo_scenario()
+
+    base = datetime(2026, 6, 26, 8, 0, 0)
+    assets = [
+        {"name": "ANALYST-WS-01", "hostname": "ANALYST-WS-01", "ip": "10.10.20.11", "owner": "employee01", "type": "endpoint", "os": "Windows 11", "role": "Employee workstation"},
+        {"name": "APP-SRV-01", "hostname": "APP-SRV-01", "ip": "10.10.20.12", "owner": "application-team", "type": "server", "os": "Linux", "role": "Internal application server"},
+        {"name": "EDGE-FW-01", "hostname": "EDGE-FW-01", "ip": "10.10.20.1", "owner": "network-team", "type": "network", "os": "Network appliance", "role": "Perimeter gateway"},
+    ]
+    attack_steps, timeline, events, traffic, traces, alerts, questions = [], [], [], [], [], [], []
+    for index, technique in enumerate(selected, start=1):
+        technique_id = technique["id"]
+        name = technique["name"]
+        tactic = (technique.get("tactics") or ["attack-activity"])[0]
+        source = (technique.get("data_sources") or ["endpoint"])[0]
+        timestamp = base + timedelta(minutes=index * 8)
+        iso = timestamp.isoformat() + "Z"
+        host = "ANALYST-WS-01" if index % 2 else "APP-SRV-01"
+        description = f"Synthetic {name} activity represented as defensive telemetry for analyst training."
+        attack_steps.append({"step": index, "technique": technique_id, "name": name, "description": description, "host": host})
+        timeline.append({"timestamp": iso, "event": description, "host": host, "mitre_id": technique_id})
+        events.append({
+            "event_type": tactic.replace("-", "_"), "source": source,
+            "host": host, "user": f"user{index:02d}",
+            "message": f"Detection telemetry associated with {technique_id} {name}",
+            "mitre_id": technique_id, "is_malicious": True, "timestamp": iso,
+        })
+        traces.append({
+            "trace_type": "process", "host": host, "process_name": f"training-process-{index}",
+            "parent_process": "system-service", "command_line": "[inert training representation]",
+            "network_target": f"198.51.100.{20 + index}:443",
+            "summary": f"Correlated trace for {technique_id} {name}", "mitre_id": technique_id,
+            "is_malicious": True, "timestamp": iso,
+        })
+        traffic.append({
+            "src_ip": f"10.10.20.{10 + index}", "dst_ip": f"198.51.100.{20 + index}",
+            "src_port": 51000 + index, "dst_port": 443, "protocol": "TCP",
+            "packets": 10 + index * 3, "bytes": 4096 + index * 1024,
+            "direction": "outbound", "summary": f"Synthetic flow correlated with {technique_id}",
+            "mitre_id": technique_id, "is_malicious": True,
+            "timestamp": (timestamp + timedelta(seconds=30)).isoformat() + "Z",
+        })
+        alerts.append({
+            "title": f"ATT&CK {technique_id}: {name}", "severity": "high",
+            "description": f"Synthetic detection for {name}", "mitre_id": technique_id,
+            "rule_name": f"romulus_{technique_id.lower().replace('.', '_')}",
+        })
+        questions.append({
+            "order": index, "question_text": f"Which MITRE ATT&CK technique describes the activity labeled {name}?",
+            "question_type": "mitre", "choices": [], "correct_answer": technique_id,
+            "required_keywords": [technique_id], "points": 10,
+            "hint": "Correlate the alert, event, and trace MITRE identifiers.",
+        })
+
+    for index in range(max(8, 16 - len(events))):
+        timestamp = base + timedelta(minutes=index * 3)
+        events.append({
+            "event_type": "normal_process", "source": "sysmon", "host": "ANALYST-WS-01",
+            "user": "employee01", "message": f"Normal background application activity {index + 1}",
+            "mitre_id": None, "is_malicious": False, "timestamp": timestamp.isoformat() + "Z",
+        })
+
+    title_ids = ", ".join(item["id"] for item in selected)
+    return {
+        "summary": f"A fictional SOC investigation built from validated MITRE ATT&CK techniques {title_ids}.",
+        "assets": assets,
+        "attack_steps": attack_steps,
+        "timeline": timeline,
+        "events": events,
+        "traffic": traffic,
+        "traces": traces,
+        "artifacts": [
+            {"name": "Endpoint Timeline", "artifact_type": "timeline", "host": "ANALYST-WS-01", "content": "Synthetic endpoint timeline correlated to selected ATT&CK techniques."},
+            {"name": "Network Flow Summary", "artifact_type": "network_summary", "host": "EDGE-FW-01", "content": "Synthetic network-flow evidence. No packets were transmitted."},
+            {"name": "Detection Notes", "artifact_type": "analyst_notes", "host": "APP-SRV-01", "content": f"Review evidence mapped to {title_ids}."},
+        ],
+        "indicators": [
+            {"ioc_type": "ip", "value": f"198.51.100.{20 + index}", "description": f"Fictional training indicator for {item['name']}", "mitre_id": item["id"]}
+            for index, item in enumerate(selected, start=1)
+        ],
+        "alerts": alerts,
+        "questions": questions,
+        "containment_actions": [
+            {"action_type": "isolate_host", "target": "ANALYST-WS-01", "description": "Isolate the affected training endpoint", "is_correct": "positive", "points": 10},
+            {"action_type": "block_ip", "target": "198.51.100.0/24", "description": "Block fictional training destinations", "is_correct": "positive", "points": 10},
+            {"action_type": "disable_account", "target": "employee01", "description": "Disable the simulated affected account", "is_correct": "positive", "points": 10},
+        ],
+    }
+
+
+def _ensure_required_techniques(data: dict, scenario: Scenario) -> dict:
+    """Constrain MITRE-only output and fill each evidence type for every selected ID."""
+    required = {value.upper() for value in (scenario.mitre_techniques or [])}
+    if not required:
+        return data
+
+    mitre_only = "MITRE ATT&CK-only" in (scenario.article_text or "")
+    supplement_scenario = _mitre_scenario(scenario)
+    for collection in ("attack_steps", "timeline", "events", "traffic", "traces", "alerts", "questions"):
+        items = data.get(collection, [])
+        if not isinstance(items, list):
+            items = []
+
+        def item_technique(item: dict) -> str | None:
+            value = item.get("technique") or item.get("mitre_id")
+            if collection == "questions" and item.get("question_type") == "mitre":
+                value = value or item.get("correct_answer")
+            return value.upper() if isinstance(value, str) else None
+
+        if mitre_only:
+            items = [item for item in items if not item_technique(item) or item_technique(item) in required]
+
+        present = {item_technique(item) for item in items}
+        supplement_by_id = {
+            item_technique(item): item for item in supplement_scenario.get(collection, [])
+            if item_technique(item)
+        }
+        for technique_id in sorted(required - present):
+            if technique_id in supplement_by_id:
+                items.append(supplement_by_id[technique_id])
+        data[collection] = items
+    return data
+
+
 def _call_provider(prompt: str, db: Session) -> dict:
     """Call the configured OpenAI-compatible provider and parse scenario JSON."""
     config = get_ai_config(db)
@@ -269,14 +445,17 @@ def _persist_scenario_data(db: Session, scenario: Scenario, data: dict):
     from app.models.alert import Alert
     from app.models.question import Question
     from app.models.containment import ContainmentAction
+    from app.models.traffic import ScenarioTraffic
+    from app.models.trace import ScenarioTrace
 
-    generated_mitre_ids = collect_generated_ids(data)
+    required_mitre_ids = {value.upper() for value in (scenario.mitre_techniques or [])}
+    generated_mitre_ids = sorted(required_mitre_ids | set(collect_generated_ids(data)))
     invalid_mitre_ids = mitre_catalog.invalid_ids(generated_mitre_ids)
     if invalid_mitre_ids:
         raise ValueError(f"AI generated invalid MITRE ATT&CK IDs: {', '.join(invalid_mitre_ids)}")
 
     # Purge any existing generated data for this scenario
-    for model in [ScenarioEvent, ScenarioArtifact, Indicator, Alert, Question, ContainmentAction]:
+    for model in [ScenarioEvent, ScenarioArtifact, ScenarioTraffic, ScenarioTrace, Indicator, Alert, Question, ContainmentAction]:
         db.query(model).filter(model.scenario_id == scenario.id).delete()
 
     # Update scenario top-level fields
@@ -315,6 +494,41 @@ def _persist_scenario_data(db: Session, scenario: Scenario, data: dict):
             host=a.get("host"),
             content=a.get("content"),
             related_event_ids=[],
+        ))
+
+    # Synthetic network flow records (no packets are transmitted).
+    for flow in data.get("traffic", []):
+        ts = None
+        try:
+            ts = dt.fromisoformat(str(flow.get("timestamp", "")).replace("Z", "+00:00"))
+        except (TypeError, ValueError):
+            pass
+        db.add(ScenarioTraffic(
+            scenario_id=scenario.id,
+            src_ip=flow.get("src_ip"), dst_ip=flow.get("dst_ip"),
+            src_port=flow.get("src_port"), dst_port=flow.get("dst_port"),
+            protocol=flow.get("protocol"), packets=flow.get("packets", 0),
+            bytes=flow.get("bytes", 0), direction=flow.get("direction"),
+            summary=flow.get("summary"), mitre_id=flow.get("mitre_id"),
+            is_malicious=flow.get("is_malicious", False), timestamp=ts,
+            flow_data=flow.get("flow_data", {}),
+        ))
+
+    # Correlated process/authentication/network traces.
+    for trace in data.get("traces", []):
+        ts = None
+        try:
+            ts = dt.fromisoformat(str(trace.get("timestamp", "")).replace("Z", "+00:00"))
+        except (TypeError, ValueError):
+            pass
+        db.add(ScenarioTrace(
+            scenario_id=scenario.id,
+            trace_type=trace.get("trace_type"), host=trace.get("host"),
+            process_name=trace.get("process_name"), parent_process=trace.get("parent_process"),
+            command_line=trace.get("command_line"), network_target=trace.get("network_target"),
+            summary=trace.get("summary"), mitre_id=trace.get("mitre_id"),
+            is_malicious=trace.get("is_malicious", False), timestamp=ts,
+            trace_data=trace.get("trace_data", {}),
         ))
 
     # Indicators
@@ -388,11 +602,19 @@ def run_ai_generation(scenario_id: int):
         if ai_config.api_key:
             logger.info(f"Calling configured AI provider for scenario {scenario_id}")
             prompt = _build_user_prompt(scenario)
-            data = _call_provider(prompt, db)
+            try:
+                data = _call_provider(prompt, db)
+            except Exception as exc:
+                logger.warning(
+                    "AI provider output was unavailable or unusable for scenario %s (%s); using validated deterministic generation",
+                    scenario_id, exc,
+                )
+                data = _mitre_scenario(scenario) if scenario.mitre_techniques else _demo_scenario()
         else:
-            logger.warning(f"AI API key not configured; using demo scenario for {scenario_id}")
-            data = _demo_scenario()
+            logger.warning(f"AI API key not configured; using deterministic scenario for {scenario_id}")
+            data = _mitre_scenario(scenario) if scenario.mitre_techniques else _demo_scenario()
 
+        data = _ensure_required_techniques(data, scenario)
         _persist_scenario_data(db, scenario, data)
 
     except Exception as exc:
