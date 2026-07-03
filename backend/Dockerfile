@@ -12,5 +12,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Create tables + seed admin on first start, then launch uvicorn
-CMD ["sh", "-c", "python seed.py && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+# Table creation and idempotent admin seeding happen in the application lifespan.
+CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
