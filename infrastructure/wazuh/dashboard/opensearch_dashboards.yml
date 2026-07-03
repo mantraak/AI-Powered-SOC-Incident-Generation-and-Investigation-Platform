@@ -1,5 +1,8 @@
 server.host: 0.0.0.0
 server.port: 5601
+server.basePath: /wazuh
+server.rewriteBasePath: true
+server.publicBaseUrl: https://localhost:48173/wazuh
 opensearch.hosts: ["https://wazuh.indexer:9200"]
 opensearch.ssl.verificationMode: certificate
 opensearch.ssl.certificateAuthorities: ["/usr/share/wazuh-dashboard/certs/root-ca.pem"]

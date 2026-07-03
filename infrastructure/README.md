@@ -1,17 +1,17 @@
 # SOC tool stack
 
-This directory deploys the investigation tools independently of the admin and
-player applications. Every component runs in Docker and persists its data in a
-named volume.
+This directory deploys the investigation tools as private Docker services.
+Every component persists its data in a named volume, while the Romulus Nginx
+gateway is the only container that publishes a host port.
 
 ## Included profiles
 
 | Profile | Containers | UI |
 |---|---|---|
-| `wazuh` | Wazuh manager, indexer and dashboard | <https://localhost:8443> |
-| `misp` | MISP, MISP modules, MariaDB and Valkey | <https://localhost:10443> |
-| `thehive` | TheHive, Cassandra and Elasticsearch | <http://localhost:9000/thehive> |
-| `monitoring` | Prometheus, Blackbox Exporter and Grafana | <http://localhost:3001> |
+| `wazuh` | Wazuh manager, indexer and dashboard | <https://localhost:48173/wazuh/> |
+| `misp` | MISP, MISP modules, MariaDB and Valkey | <https://localhost:48173/misp/> |
+| `thehive` | TheHive, Cassandra and Elasticsearch | <https://localhost:48173/thehive/> |
+| `monitoring` | Prometheus, Blackbox Exporter and Grafana | <https://localhost:48173/grafana/> |
 | `security` | Semgrep, Gitleaks and Trivy (on-demand) | CLI reports |
 
 The complete stack is heavy. Allow Docker Desktop at least 16 GB RAM for all
@@ -49,8 +49,8 @@ bash infrastructure/tools.sh start all
 docker compose --project-directory . -f infrastructure/docker-compose.yml up -d --build
 ```
 
-Open <http://localhost> in the Windows browser. Docker Desktop forwards the
-published WSL container ports to Windows automatically.
+Open <https://localhost:48173> in the Windows browser. Docker Desktop forwards
+the single gateway port to Windows automatically.
 
 Useful WSL commands:
 
@@ -106,16 +106,18 @@ infrastructure/docker-compose.tools.yml down --volumes` manually.
 
 | Application | URL | Development username | Development password |
 |---|---|---|---|
-| Romulus admin | <http://localhost> | `admin@aisocplatform.dev` | `Admin@1234` |
-| Wazuh | <https://localhost:8443> | `admin` | `SecretPassword` |
-| MISP | <https://localhost:10443> | `admin@admin.test` | `ChangeMe-MISP-2026!` |
-| TheHive | <http://localhost:9000/thehive> | `admin@thehive.local` | `secret` |
-| Grafana | <http://localhost:3001> | `admin` | `ChangeMe-Grafana-2026!` |
-| Prometheus | <http://localhost:9090> | No authentication | No authentication |
+| Romulus admin | <https://localhost:48173> | `admin@aisocplatform.dev` | `Admin@1234` |
+| Wazuh | <https://localhost:48173/wazuh/> | `admin` | `SecretPassword` |
+| MISP | <https://localhost:48173/misp/> | `admin@admin.test` | `ChangeMe-MISP-2026!` |
+| TheHive | <https://localhost:48173/thehive/> | `admin@thehive.local` | `secret` |
+| Grafana | <https://localhost:48173/grafana/> | `admin` | `ChangeMe-Grafana-2026!` |
+| Prometheus | <https://localhost:48173/prometheus/> | No authentication | No authentication |
 
 Immediately change these credentials before sharing or exposing the stack.
 
-Self-signed TLS warnings are expected for local Wazuh and MISP.
+TLS remains enabled between the gateway and the Wazuh/MISP containers; the
+local browser reaches every application over the single HTTPS gateway. Accept
+the generated development certificate warning once on first access.
 
 ## Scenario lifecycle
 

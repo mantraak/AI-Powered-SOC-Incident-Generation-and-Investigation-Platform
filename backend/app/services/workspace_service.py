@@ -24,6 +24,47 @@ def _credentials(workspace: LabWorkspace) -> dict:
     return json.loads(decrypt_api_key(workspace.encrypted_credentials))
 
 
+def _scenario_tools(lab: PlayerLab) -> list[str]:
+    """Choose shared SOC platforms that support this scenario's investigation."""
+    difficulty = getattr(lab.scenario.difficulty, "value", lab.scenario.difficulty)
+    techniques = set(lab.scenario.mitre_techniques or [])
+    tools = ["wazuh"]
+    if difficulty in ("intermediate", "advanced"):
+        tools.append("thehive")
+    if difficulty == "advanced" or techniques.intersection({"T1566.001", "T1071.001", "T1041", "T1583.001"}):
+        tools.append("misp")
+    if difficulty == "advanced":
+        tools.append("grafana")
+    return tools
+
+
+def _shared_tool_credentials(required_tools: list[str]) -> dict:
+    catalogue = {
+        "misp": {
+            "username": settings.MISP_TRAINING_USERNAME,
+            "password": settings.MISP_TRAINING_PASSWORD,
+            "url": settings.MISP_PUBLIC_URL,
+            "scope": "shared-training",
+            "purpose": "Threat intelligence, IOC enrichment and correlation",
+        },
+        "thehive": {
+            "username": settings.THEHIVE_TRAINING_USERNAME,
+            "password": settings.THEHIVE_TRAINING_PASSWORD,
+            "url": settings.THEHIVE_PUBLIC_URL,
+            "scope": "shared-training",
+            "purpose": "Case management, alert triage and investigation notes",
+        },
+        "grafana": {
+            "username": settings.GRAFANA_TRAINING_USERNAME,
+            "password": settings.GRAFANA_TRAINING_PASSWORD,
+            "url": settings.GRAFANA_PUBLIC_URL,
+            "scope": "shared-training",
+            "purpose": "SOC service health and telemetry monitoring",
+        },
+    }
+    return {name: catalogue[name] for name in required_tools if name in catalogue}
+
+
 def _wazuh_request(client: httpx.Client, method: str, path: str, **kwargs):
     response = client.request(method, f"{settings.WAZUH_INDEXER_URL.rstrip('/')}{path}", **kwargs)
     response.raise_for_status()
@@ -99,20 +140,55 @@ def _provision_wazuh(db: Session, lab: PlayerLab, workspace: LabWorkspace) -> di
             "password": password,
             "tenant": tenant,
             "index": index_name,
-            "url": f"{settings.WAZUH_PUBLIC_URL.rstrip('/')}/app/wz-home?security_tenant={tenant}",
+            "url": f"{settings.WAZUH_PUBLIC_URL.rstrip('/')}/app/login?security_tenant={tenant}",
+            "scope": "isolated",
+            "purpose": "Dedicated SIEM evidence index and private dashboard tenant",
         }
     }
+
+
+def deprovision_lab_workspace(db: Session, lab: PlayerLab) -> None:
+    workspace = db.query(LabWorkspace).filter(LabWorkspace.lab_id == lab.id).first()
+    if not workspace:
+        return
+    suffix = workspace.workspace_id.replace("-", "_")
+    auth = (settings.WAZUH_INDEXER_USERNAME, settings.WAZUH_INDEXER_PASSWORD)
+    with httpx.Client(auth=auth, verify=False, timeout=20.0) as client:
+        for path in (
+            f"/romulus-lab-{workspace.workspace_id}",
+            f"/_plugins/_security/api/internalusers/romulus_{suffix}",
+            f"/_plugins/_security/api/rolesmapping/romulus_role_{suffix}",
+            f"/_plugins/_security/api/roles/romulus_role_{suffix}",
+            f"/_plugins/_security/api/tenants/romulus_{suffix}",
+        ):
+            response = client.delete(f"{settings.WAZUH_INDEXER_URL.rstrip('/')}{path}")
+            if response.status_code not in (200, 404):
+                response.raise_for_status()
 
 
 def provision_lab_workspace(db: Session, lab: PlayerLab) -> LabWorkspace:
     workspace = db.query(LabWorkspace).filter(LabWorkspace.lab_id == lab.id).first()
     if workspace and workspace.status == "ready":
+        required_tools = _scenario_tools(lab)
+        credentials = _credentials(workspace)
+        if "wazuh" in credentials:
+            tenant = credentials["wazuh"].get("tenant", f"romulus_{workspace.workspace_id}")
+            credentials["wazuh"].update({
+                "url": f"{settings.WAZUH_PUBLIC_URL.rstrip('/')}/app/login?security_tenant={tenant}",
+                "scope": "isolated",
+                "purpose": "Dedicated SIEM evidence index and private dashboard tenant",
+            })
+        credentials.update(_shared_tool_credentials(required_tools))
+        workspace.required_tools = required_tools
+        workspace.encrypted_credentials = encrypt_api_key(json.dumps(credentials))
+        db.commit()
+        db.refresh(workspace)
         return workspace
     if not workspace:
         workspace = LabWorkspace(
             lab_id=lab.id,
             workspace_id=uuid.uuid4().hex[:12],
-            required_tools=["wazuh"],
+            required_tools=_scenario_tools(lab),
             status="provisioning",
         )
         db.add(workspace)
@@ -120,6 +196,7 @@ def provision_lab_workspace(db: Session, lab: PlayerLab) -> LabWorkspace:
         db.refresh(workspace)
     try:
         credentials = _provision_wazuh(db, lab, workspace)
+        credentials.update(_shared_tool_credentials(workspace.required_tools or []))
         workspace.encrypted_credentials = encrypt_api_key(json.dumps(credentials))
         workspace.status = "ready"
         workspace.provisioning_error = None

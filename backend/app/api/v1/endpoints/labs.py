@@ -14,7 +14,7 @@ from app.models.containment import ContainmentAction
 from app.models.score import PlayerScore
 from app.schemas.lab import LabOut, LabAssign, AnswerSubmit, AnswerOut, ContainmentSubmit, ScoreOut
 from app.evaluators.answer_evaluator import evaluate_answer
-from app.services.workspace_service import provision_lab_workspace, workspace_payload
+from app.services.workspace_service import deprovision_lab_workspace, provision_lab_workspace, workspace_payload
 
 router = APIRouter()
 
@@ -242,3 +242,27 @@ def reset_lab(
         "answers_deleted": answers_deleted,
         "scores_deleted": scores_deleted,
     }
+
+
+@router.delete("/{lab_id}")
+def unassign_lab(
+    lab_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin),
+):
+    """Remove an assignment, its player progress and its isolated SIEM resources."""
+    lab = db.query(PlayerLab).filter(PlayerLab.id == lab_id).first()
+    if not lab:
+        raise HTTPException(status_code=404, detail="Lab not found")
+
+    cleanup_warning = None
+    try:
+        deprovision_lab_workspace(db, lab)
+    except Exception as exc:
+        cleanup_warning = f"External SIEM cleanup failed: {exc.__class__.__name__}"
+
+    db.query(PlayerAnswer).filter(PlayerAnswer.lab_id == lab_id).delete(synchronize_session=False)
+    db.query(PlayerScore).filter(PlayerScore.lab_id == lab_id).delete(synchronize_session=False)
+    db.delete(lab)
+    db.commit()
+    return {"message": "Lab unassigned", "lab_id": lab_id, "warning": cleanup_warning}

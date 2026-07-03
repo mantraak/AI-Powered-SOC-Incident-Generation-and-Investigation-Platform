@@ -28,6 +28,12 @@ Always respond with valid JSON only – no markdown fences, no preamble, no comm
 """
 
 def _build_user_prompt(scenario: Scenario) -> str:
+    difficulty = getattr(scenario.difficulty, "value", scenario.difficulty) or "intermediate"
+    complexity = {
+        "beginner": ("12-18", "6-10", "6-10", "one clear attack path with limited noise"),
+        "intermediate": ("18-24", "8-12", "8-12", "a multi-stage attack with benign lookalikes and one investigation pivot"),
+        "advanced": ("24-32", "10-16", "10-16", "a multi-host attack with identity, endpoint and network pivots, false positives, a telemetry gap and competing hypotheses"),
+    }.get(str(difficulty), ("18-24", "8-12", "8-12", "a multi-stage investigation"))
     technique_context = []
     for technique_id in scenario.mitre_techniques or []:
         technique = mitre_catalog.get(technique_id)
@@ -125,9 +131,15 @@ Return a JSON object with EXACTLY this structure:
 }}
 
 Rules:
-- Generate 3-5 assets, one attack step per selected technique, 12-18 representative logs/events,
-  6-10 network traffic flows, 6-10 process/network traces, 3-5 artifacts,
+- This is a {str(difficulty).upper()} investigation: create {complexity[3]}.
+- Generate 3-7 assets, one attack step per selected technique, {complexity[0]} representative logs/events,
+  {complexity[1]} network traffic flows, {complexity[2]} process/authentication/network traces, 4-7 artifacts,
   5-8 indicators, 3-5 alerts, {scenario.num_questions or 10} questions, and 3-5 containment_actions.
+- Use realistic SIEM fields and correlations: event IDs, process parent/child chains, authentication outcomes,
+  DNS/HTTP metadata, alert rule context, host/user pivots and a mixture of malicious and benign activity.
+- Do not reveal the answer in every message. Include ambiguous evidence that must be correlated across sources.
+- Advanced scenarios must span at least three assets, include two plausible false positives, one missing or delayed
+  telemetry interval, and require a cross-platform Wazuh/TheHive/MISP investigation.
 - Normal (non-malicious) events must have "is_malicious": false.
 - Use realistic but fictional hostnames, IPs (RFC 5737 / RFC 3849 ranges), usernames.
 - All timestamps in ISO 8601 format starting around 2026-06-26T08:00:00Z.

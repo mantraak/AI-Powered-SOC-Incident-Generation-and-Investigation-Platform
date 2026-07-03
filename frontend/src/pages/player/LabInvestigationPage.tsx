@@ -12,7 +12,7 @@ interface Indicator { id: number; ioc_type: string; value: string; description: 
 interface ContainmentOption { id: number; action_type: string; target: string; description: string; }
 interface TrafficFlow { id: number; src_ip: string; dst_ip: string; src_port?: number; dst_port?: number; protocol: string; packets: number; bytes: number; direction?: string; summary?: string; mitre_id?: string; is_malicious: boolean; timestamp?: string; }
 interface Trace { id: number; trace_type: string; host: string; process_name?: string; parent_process?: string; command_line?: string; network_target?: string; summary?: string; mitre_id?: string; is_malicious: boolean; timestamp?: string; }
-interface Workspace { workspace_id: string; status: string; required_tools: string[]; detail?: string; tools: Record<string, { username: string; password: string; url: string; tenant?: string; index?: string }>; }
+interface Workspace { workspace_id: string; status: string; required_tools: string[]; detail?: string; tools: Record<string, { username: string; password: string; url: string; tenant?: string; index?: string; scope?: string; purpose?: string }>; }
 
 type Tab = "briefing" | "tools" | "events" | "traffic" | "traces" | "artifacts" | "alerts" | "indicators" | "questions" | "containment" | "score";
 
@@ -287,10 +287,15 @@ export function LabInvestigationPage() {
                 {workspace.detail && <p className="text-xs text-[#ffb4ab] mt-2">{workspace.detail}</p>}
               </Card>
               {Object.entries(workspace.tools).map(([name, tool]) => (
-                <Card key={name}>
-                  <div className="flex flex-wrap items-start justify-between gap-4"><div><div className="flex items-center gap-2"><Icon name="shield_lock" className="text-[#b4c5ff]" /><h3 className="font-semibold text-[#e1e2ed] capitalize">{name}</h3></div><p className="text-xs text-[#8d90a0] mt-1">Dedicated tenant credentials for this lab only</p></div><Button onClick={() => window.open(tool.url, '_blank', 'noopener,noreferrer')}><Icon name="open_in_new" className="text-base" /> Open {name}</Button></div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4 p-3 rounded-lg bg-[#0c0e16] border border-[#434655] text-xs font-mono"><p className="text-[#8d90a0]">Username<br/><span className="text-[#b4c5ff] select-all">{tool.username}</span></p><p className="text-[#8d90a0]">Password<br/><span className="text-[#6ee7b7] select-all break-all">{tool.password}</span></p>{tool.index && <p className="text-[#8d90a0] md:col-span-2">Evidence index<br/><span className="text-[#c3c6d7] select-all">{tool.index}</span></p>}</div>
-                </Card>
+                  <Card key={name}>
+                    <div className="flex flex-wrap items-start justify-between gap-4"><div><div className="flex items-center gap-2"><Icon name={name === "wazuh" ? "shield_lock" : "hub"} className="text-[#b4c5ff]" /><h3 className="font-semibold text-[#e1e2ed] capitalize">{name}</h3><Badge color={tool.scope === "isolated" ? "green" : "yellow"}>{tool.scope === "isolated" ? "Isolated" : "Shared training"}</Badge></div><p className="text-xs text-[#8d90a0] mt-1">{tool.purpose || "SOC investigation platform"}</p></div><Button onClick={() => window.open(tool.url, '_blank', 'noopener,noreferrer')}><Icon name="open_in_new" className="text-base" /> Open {name}</Button></div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4 p-3 rounded-lg bg-[#0c0e16] border border-[#434655] text-xs font-mono">
+                      <div className="text-[#8d90a0]">Username<div className="flex items-center gap-2 mt-1"><span className="text-[#b4c5ff] select-all break-all">{tool.username}</span><button className="text-[#8d90a0] hover:text-white" title="Copy username" onClick={() => navigator.clipboard.writeText(tool.username)}><Icon name="content_copy" className="text-sm" /></button></div></div>
+                      <div className="text-[#8d90a0]">Password<div className="flex items-center gap-2 mt-1"><span className="text-[#6ee7b7] select-all break-all">{tool.password}</span><button className="text-[#8d90a0] hover:text-white" title="Copy password" onClick={() => navigator.clipboard.writeText(tool.password)}><Icon name="content_copy" className="text-sm" /></button></div></div>
+                      {tool.index && <p className="text-[#8d90a0] md:col-span-2">Evidence index<br/><span className="text-[#c3c6d7] select-all">{tool.index}</span></p>}
+                    </div>
+                    {name === "wazuh" && <p className="text-[11px] text-[#8d90a0] mt-3 flex items-start gap-1.5"><Icon name="info" className="text-sm text-[#b4c5ff]" /> If Wazuh is already signed in as another user, sign out first or open the link in a private window, then paste these credentials.</p>}
+                  </Card>
               ))}
             </div>
           )

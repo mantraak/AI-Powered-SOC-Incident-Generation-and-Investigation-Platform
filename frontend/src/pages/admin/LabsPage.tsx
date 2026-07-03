@@ -57,6 +57,17 @@ export function AdminLabsPage() {
     }
   };
 
+  const unassignLab = async (lab: Lab) => {
+    if (!confirm(`Unassign ${getScenarioTitle(lab.scenario_id)} from ${getUserName(lab.player_id)}? This removes their progress and isolated SIEM workspace.`)) return;
+    setError("");
+    try {
+      await api.delete(`/labs/${lab.id}`);
+      await load();
+    } catch (err: any) {
+      setError(err.response?.data?.detail || "Unable to unassign the lab");
+    }
+  };
+
   return (
     <AppLayout>
       <div className="p-6 lg:p-8 max-w-7xl mx-auto">
@@ -153,9 +164,14 @@ export function AdminLabsPage() {
                         {lab.submitted_at ? new Date(lab.submitted_at).toLocaleString() : "—"}
                       </td>
                       <td className="py-3 px-4">
-                        <Button variant="secondary" size="sm" onClick={() => resetLab(lab)}>
-                          <Icon name="restart_alt" className="text-sm" /> Reset
-                        </Button>
+                        <div className="flex flex-wrap gap-2">
+                          <Button variant="secondary" size="sm" onClick={() => resetLab(lab)}>
+                            <Icon name="restart_alt" className="text-sm" /> Reset
+                          </Button>
+                          <Button variant="secondary" size="sm" onClick={() => unassignLab(lab)}>
+                            <Icon name="person_remove" className="text-sm text-[#ffb4ab]" /> Unassign
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}

@@ -230,6 +230,10 @@ export AI_MODEL='meta/llama-3.3-70b-instruct'
 docker compose --project-directory . -f infrastructure/docker-compose.yml up -d --build
 ```
 
+Open Romulus at <https://localhost:48173>. The same gateway exposes all SOC
+applications under `/wazuh/`, `/misp/`, `/thehive/`, `/grafana/`, and
+`/prometheus/`; tool containers do not publish separate host ports.
+
 ---
 
 ## Security

@@ -55,6 +55,17 @@ services:
       WAZUH_INDEXER_URL: https://wazuh.indexer:9200
       WAZUH_INDEXER_USERNAME: admin
       WAZUH_INDEXER_PASSWORD: ${WAZUH_INDEXER_PASSWORD:-SecretPassword}
+      WAZUH_PUBLIC_URL: ${WAZUH_PUBLIC_URL:-https://localhost:48173/wazuh}
+      MISP_PUBLIC_URL: ${MISP_PUBLIC_URL:-https://localhost:48173/misp}
+      MISP_TRAINING_USERNAME: ${MISP_ADMIN_EMAIL:-admin@admin.test}
+      MISP_TRAINING_PASSWORD: ${MISP_ADMIN_PASSWORD:-ChangeMe-MISP-2026!}
+      THEHIVE_PUBLIC_URL: ${THEHIVE_PUBLIC_URL:-https://localhost:48173/thehive}
+      THEHIVE_TRAINING_USERNAME: ${THEHIVE_ADMIN_EMAIL:-admin@thehive.local}
+      THEHIVE_TRAINING_PASSWORD: ${THEHIVE_ADMIN_PASSWORD:-secret}
+      GRAFANA_PUBLIC_URL: ${GRAFANA_PUBLIC_URL:-https://localhost:48173/grafana}
+      PROMETHEUS_PUBLIC_URL: ${PROMETHEUS_PUBLIC_URL:-https://localhost:48173/prometheus}
+      GRAFANA_TRAINING_USERNAME: ${GRAFANA_ADMIN_USER:-admin}
+      GRAFANA_TRAINING_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-ChangeMe-Grafana-2026!}
       MITRE_ATTACK_VERSION: "19.1"
       MITRE_CATALOG_PATH: /app/data/mitre/catalog.json
     depends_on:
@@ -97,14 +108,19 @@ services:
     image: nginx:alpine
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "${ROMULUS_PORT:-48173}:443"
     volumes:
       - ./infrastructure/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./infrastructure/wazuh/certs/wazuh.dashboard.pem:/etc/nginx/certs/gateway.pem:ro
+      - ./infrastructure/wazuh/certs/wazuh.dashboard-key.pem:/etc/nginx/certs/gateway-key.pem:ro
     depends_on:
       backend:
         condition: service_healthy
       frontend:
         condition: service_healthy
+    networks:
+      - default
+      - soc-tools
 
 volumes:
   postgres_data:
