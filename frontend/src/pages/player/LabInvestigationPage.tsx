@@ -240,18 +240,23 @@ export function LabInvestigationPage() {
             </Card>
 
             {scenario.assets?.length > 0 && (
-              <Card>
-                <div className="flex items-center gap-2 mb-3 pb-3 border-b border-[#434655]">
-                  <Icon name="dns" className="text-[#b4c5ff]" />
-                  <h2 className="text-sm font-semibold text-[#e1e2ed]">Affected Assets</h2>
+              <Card className="p-0 overflow-hidden">
+                <div className="flex items-center justify-between gap-3 p-5 border-b border-white/[0.08] bg-white/[0.018]">
+                  <div className="flex items-center gap-3"><span className="w-9 h-9 rounded-xl bg-cyan-500/10 flex items-center justify-center"><Icon name="dns" className="text-cyan-300" /></span><div><h2 className="text-sm font-semibold text-[#edf0fa]">Affected Assets</h2><p className="text-xs text-[#737b8d] mt-0.5">Systems in investigation scope</p></div></div>
+                  <Badge color="cyan">{scenario.assets.length}</Badge>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="p-4 grid grid-cols-1 xl:grid-cols-2 gap-3">
                   {scenario.assets.map((a: any, i: number) => (
-                    <div key={i} className="flex items-center gap-3 text-sm p-3 rounded-xl bg-black/15 border border-white/[0.07]">
-                      <span className="w-9 h-9 rounded-lg bg-cyan-500/10 flex items-center justify-center"><Icon name={a.type === "server" ? "dns" : "computer"} className="text-cyan-300" /></span>
-                      <Badge color="gray">{a.type || "asset"}</Badge>
-                      <span className="text-[#e1e2ed] font-mono">{a.name}</span>
-                      <span className="text-[#8d90a0]">{a.os} · {a.role}</span>
+                    <div key={i} className="min-w-0 p-4 rounded-xl bg-black/15 border border-white/[0.075] hover:border-cyan-500/20 transition-all">
+                      <div className="flex items-start justify-between gap-3 mb-4">
+                        <div className="flex items-center gap-3 min-w-0"><span className="w-10 h-10 shrink-0 rounded-xl bg-cyan-500/10 flex items-center justify-center"><Icon name={a.type === "server" ? "dns" : a.type === "network" ? "router" : "computer"} className="text-xl text-cyan-300" /></span><div className="min-w-0"><p className="text-sm font-semibold text-[#edf0fa] font-mono break-words">{a.hostname || a.name || "Unnamed asset"}</p><p className="text-[10px] uppercase tracking-[0.14em] text-[#697285] mt-1">Investigation asset</p></div></div>
+                        <Badge color="gray" className="shrink-0">{a.type || "asset"}</Badge>
+                      </div>
+                      <div className="space-y-2 text-xs">
+                        <div className="flex justify-between gap-4"><span className="text-[#697285]">Platform</span><span className="text-[#c3c9d8] text-right break-words">{a.os || a.platform || "Unknown"}</span></div>
+                        <div className="flex justify-between gap-4"><span className="text-[#697285]">Role</span><span className="text-[#c3c9d8] text-right break-words">{a.role || a.owner || "Not specified"}</span></div>
+                        {a.ip && <div className="flex justify-between gap-4"><span className="text-[#697285]">IP address</span><span className="text-[#9fb9ff] font-mono text-right break-all">{a.ip}</span></div>}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -259,12 +264,12 @@ export function LabInvestigationPage() {
             )}
 
             {scenario.mitre_techniques?.length > 0 && (
-              <Card>
-                <div className="flex items-center gap-2 mb-3 pb-3 border-b border-[#434655]">
-                  <Icon name="target" className="text-[#b4c5ff]" />
-                  <h2 className="text-sm font-semibold text-[#e1e2ed]">MITRE ATT&amp;CK Techniques</h2>
+              <Card className="p-0 overflow-hidden">
+                <div className="flex items-center justify-between gap-3 p-5 border-b border-white/[0.08] bg-white/[0.018]">
+                  <div className="flex items-center gap-3"><span className="w-9 h-9 rounded-xl bg-purple-500/10 flex items-center justify-center"><Icon name="target" className="text-purple-300" /></span><div><h2 className="text-sm font-semibold text-[#edf0fa]">MITRE ATT&amp;CK Techniques</h2><p className="text-xs text-[#737b8d] mt-0.5">Behaviors included in this exercise</p></div></div>
+                  <Badge color="purple">{scenario.mitre_techniques.length}</Badge>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="p-5 flex flex-wrap gap-2">
                   {scenario.mitre_techniques.map((t: string) => (
                     <Badge key={t} color="purple">{t}</Badge>
                   ))}
