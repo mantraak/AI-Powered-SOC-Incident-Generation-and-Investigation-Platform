@@ -3,6 +3,7 @@ import api from "../../api/client";
 import { AppLayout, PageHeader } from "../../components/layout/AppLayout";
 import { Badge, Button, Card, Spinner, EmptyState, Icon } from "../../components/ui";
 import type { SocTool } from "../../types";
+import { gatewayToolUrl } from "../../utils/toolUrls";
 
 const categoryIcon: Record<string, string> = {
   siem:          "monitoring",
@@ -91,7 +92,7 @@ export function AdminToolsPage() {
                 <p className="text-sm text-[#c3c6d7] flex-1">{tool.description}</p>
                 <p className="text-xs text-[#8d90a0] mt-3 mb-3 font-mono">{tool.detail}</p>
                 <Button
-                  onClick={() => window.open(tool.public_url, "_blank", "noopener,noreferrer")}
+                  onClick={() => window.open(gatewayToolUrl(tool.id, tool.public_url), "_blank", "noopener,noreferrer")}
                   disabled={tool.status !== "online"}
                   data-testid={`open-tool-${tool.id}`}
                 >

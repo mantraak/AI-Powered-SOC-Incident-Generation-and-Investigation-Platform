@@ -4,6 +4,7 @@ import { AppLayout, PageHeader } from "../../components/layout/AppLayout";
 import { Card, Button, Badge, SeverityBadge, Spinner, EmptyState, Icon } from "../../components/ui";
 import api from "../../api/client";
 import type { Lab, Question, PlayerAnswer, Score } from "../../types";
+import { gatewayToolUrl } from "../../utils/toolUrls";
 
 interface Event { id: number; event_type: string; source: string; host: string; user: string; message: string; mitre_id?: string; timestamp?: string; }
 interface Artifact { id: number; name: string; artifact_type: string; host: string; content: string; }
@@ -288,7 +289,7 @@ export function LabInvestigationPage() {
               </Card>
               {Object.entries(workspace.tools).map(([name, tool]) => (
                   <Card key={name}>
-                    <div className="flex flex-wrap items-start justify-between gap-4"><div><div className="flex items-center gap-2"><Icon name={name === "wazuh" ? "shield_lock" : "hub"} className="text-[#b4c5ff]" /><h3 className="font-semibold text-[#e1e2ed] capitalize">{name}</h3><Badge color={tool.scope === "isolated" ? "green" : "yellow"}>{tool.scope === "isolated" ? "Isolated" : "Shared training"}</Badge></div><p className="text-xs text-[#8d90a0] mt-1">{tool.purpose || "SOC investigation platform"}</p></div><Button onClick={() => window.open(tool.url, '_blank', 'noopener,noreferrer')}><Icon name="open_in_new" className="text-base" /> Open {name}</Button></div>
+                    <div className="flex flex-wrap items-start justify-between gap-4"><div><div className="flex items-center gap-2"><Icon name={name === "wazuh" ? "shield_lock" : "hub"} className="text-[#b4c5ff]" /><h3 className="font-semibold text-[#e1e2ed] capitalize">{name}</h3><Badge color={tool.scope === "isolated" ? "green" : "yellow"}>{tool.scope === "isolated" ? "Isolated" : "Shared training"}</Badge></div><p className="text-xs text-[#8d90a0] mt-1">{tool.purpose || "SOC investigation platform"}</p></div><Button onClick={() => window.open(gatewayToolUrl(name, tool.url), '_blank', 'noopener,noreferrer')}><Icon name="open_in_new" className="text-base" /> Open {name}</Button></div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4 p-3 rounded-lg bg-[#0c0e16] border border-[#434655] text-xs font-mono">
                       <div className="text-[#8d90a0]">Username<div className="flex items-center gap-2 mt-1"><span className="text-[#b4c5ff] select-all break-all">{tool.username}</span><button className="text-[#8d90a0] hover:text-white" title="Copy username" onClick={() => navigator.clipboard.writeText(tool.username)}><Icon name="content_copy" className="text-sm" /></button></div></div>
                       <div className="text-[#8d90a0]">Password<div className="flex items-center gap-2 mt-1"><span className="text-[#6ee7b7] select-all break-all">{tool.password}</span><button className="text-[#8d90a0] hover:text-white" title="Copy password" onClick={() => navigator.clipboard.writeText(tool.password)}><Icon name="content_copy" className="text-sm" /></button></div></div>
