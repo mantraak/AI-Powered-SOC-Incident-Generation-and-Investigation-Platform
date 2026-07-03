@@ -9,6 +9,17 @@ import { MitreTechniqueSelector } from "../../components/mitre/MitreTechniqueSel
 const inputCls =
   "w-full bg-[#0b0f18]/90 border border-white/[0.1] rounded-xl px-3.5 py-2.5 text-sm text-[#e1e2ed] placeholder-[#737888] focus:outline-none focus:border-[#7f9eff] focus:ring-4 focus:ring-[#356df3]/15 transition-all shadow-inner";
 
+function timelineMoment(item: any, index: number) {
+  const raw = item.timestamp || item.time;
+  if (!raw) return { time: `T+${String(index * 5).padStart(2, "0")}m`, date: "Relative time" };
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return { time: String(raw), date: "Scenario time" };
+  return {
+    time: parsed.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+    date: parsed.toLocaleDateString([], { month: "short", day: "numeric" }),
+  };
+}
+
 /* ════════════════════════ Scenario List ════════════════════════ */
 export function AdminScenariosPage() {
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
@@ -447,18 +458,20 @@ export function ScenarioDetailPage() {
         )}
 
         {tab === "timeline" && (
-          <Card>
-            <div className="flex items-center gap-2 mb-4 pb-3 border-b border-[#434655]">
-              <Icon name="schedule" className="text-[#b4c5ff]" />
-              <h3 className="text-sm font-semibold text-[#e1e2ed]">Attack Timeline</h3>
+          <Card className="p-0 overflow-hidden">
+            <div className="flex items-center justify-between gap-3 p-5 border-b border-white/[0.08] bg-white/[0.018]">
+              <div className="flex items-center gap-3"><span className="w-9 h-9 rounded-xl bg-[#356df3]/15 flex items-center justify-center"><Icon name="schedule" className="text-[#9fb9ff]" /></span><div><h3 className="text-sm font-semibold text-[#edf0fa]">Attack Timeline</h3><p className="text-xs text-[#7f8799] mt-0.5">Chronological sequence of correlated adversary activity</p></div></div>
+              <Badge color="blue">{scenario.timeline?.length || 0} events</Badge>
             </div>
             {scenario.timeline?.length ? (
-              <div className="space-y-3">
+              <div className="p-5 sm:p-6">
                 {scenario.timeline.map((item: any, i: number) => (
-                  <div key={i} className="flex gap-4">
-                    <span className="text-xs font-mono text-[#b4c5ff] w-20 shrink-0 pt-0.5">{item.time}</span>
-                    <div className="flex-1 pb-3 border-b border-[#434655]/50 last:border-0">
-                      <p className="text-sm text-[#e1e2ed]">{item.event}</p>
+                  <div key={i} className="grid grid-cols-[76px_24px_minmax(0,1fr)] sm:grid-cols-[100px_28px_minmax(0,1fr)] gap-2 sm:gap-4 group">
+                    <div className="text-right pt-3"><p className="text-xs font-mono font-semibold text-[#a9bfff]">{timelineMoment(item, i).time}</p><p className="text-[10px] text-[#687083] mt-0.5">{timelineMoment(item, i).date}</p></div>
+                    <div className="relative flex justify-center"><span className="absolute top-5 bottom-0 w-px bg-gradient-to-b from-[#557ff0]/50 to-white/[0.06] group-last:hidden" /><span className="relative mt-4 w-3 h-3 rounded-full bg-[#356df3] border-[3px] border-[#111725] ring-2 ring-[#557ff0]/35 shadow-[0_0_16px_rgba(53,109,243,.65)]" /></div>
+                    <div className="mb-4 p-4 rounded-xl border border-white/[0.075] bg-white/[0.025] group-hover:bg-white/[0.045] group-hover:border-[#6f91ef]/20 transition-all">
+                      <div className="flex flex-wrap items-center gap-2 mb-1.5">{item.mitre_id && <Badge color="purple">{item.mitre_id}</Badge>}{item.host && <span className="text-[11px] font-mono text-[#8fa7e8] flex items-center gap-1"><Icon name="computer" className="text-xs" />{item.host}</span>}</div>
+                      <p className="text-sm text-[#d9deeb] leading-6">{item.event || item.description}</p>
                     </div>
                   </div>
                 ))}
@@ -468,22 +481,24 @@ export function ScenarioDetailPage() {
         )}
 
         {tab === "attack" && (
-          <Card>
-            <div className="flex items-center gap-2 mb-4 pb-3 border-b border-[#434655]">
-              <Icon name="stairs" className="text-[#b4c5ff]" />
-              <h3 className="text-sm font-semibold text-[#e1e2ed]">Attack Steps</h3>
+          <Card className="p-0 overflow-hidden">
+            <div className="flex items-center justify-between gap-3 p-5 border-b border-white/[0.08] bg-white/[0.018]">
+              <div className="flex items-center gap-3"><span className="w-9 h-9 rounded-xl bg-purple-500/10 flex items-center justify-center"><Icon name="stairs" className="text-purple-300" /></span><div><h3 className="text-sm font-semibold text-[#edf0fa]">Attack Chain</h3><p className="text-xs text-[#7f8799] mt-0.5">Ordered behaviors mapped to ATT&amp;CK techniques</p></div></div>
+              <Badge color="purple">{scenario.attack_steps?.length || 0} stages</Badge>
             </div>
             {scenario.attack_steps?.length ? (
-              <div className="space-y-3">
+              <div className="p-5 grid grid-cols-1 xl:grid-cols-2 gap-3">
                 {scenario.attack_steps.map((step: any) => (
-                  <div key={step.step} className="flex gap-4 p-4 bg-[#0c0e16] rounded-lg border border-[#434655]">
-                    <span className="text-2xl font-bold text-[#b4c5ff] w-10 shrink-0 leading-none">{step.step}</span>
+                  <div key={step.step} className="relative flex gap-4 p-4 bg-black/15 rounded-xl border border-white/[0.08] hover:border-purple-500/25 hover:bg-purple-500/[0.035] transition-all overflow-hidden">
+                    <span className="absolute -right-1 -bottom-4 text-7xl font-black text-white/[0.025]">{String(step.step).padStart(2, "0")}</span>
+                    <span className="w-9 h-9 rounded-xl bg-purple-500/12 ring-1 ring-purple-500/25 text-purple-300 flex items-center justify-center text-sm font-bold shrink-0">{step.step}</span>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <span className="text-sm font-semibold text-[#e1e2ed]">{step.name}</span>
                         <Badge color="purple">{step.technique}</Badge>
                       </div>
                       <p className="text-sm text-[#c3c6d7]">{step.description}</p>
+                      {step.host && <p className="text-xs text-[#737b8d] mt-3 flex items-center gap-1.5"><Icon name="computer" className="text-sm" /> Target: <span className="font-mono text-[#9aa9ca]">{step.host}</span></p>}
                     </div>
                   </div>
                 ))}
@@ -493,23 +508,21 @@ export function ScenarioDetailPage() {
         )}
 
         {tab === "assets" && (
-          <Card>
-            <div className="flex items-center gap-2 mb-4 pb-3 border-b border-[#434655]">
-              <Icon name="dns" className="text-[#b4c5ff]" />
-              <h3 className="text-sm font-semibold text-[#e1e2ed]">Assets</h3>
+          <Card className="p-0 overflow-hidden">
+            <div className="flex items-center justify-between gap-3 p-5 border-b border-white/[0.08] bg-white/[0.018]">
+              <div className="flex items-center gap-3"><span className="w-9 h-9 rounded-xl bg-cyan-500/10 flex items-center justify-center"><Icon name="dns" className="text-cyan-300" /></span><div><h3 className="text-sm font-semibold text-[#edf0fa]">Environment Assets</h3><p className="text-xs text-[#7f8799] mt-0.5">Hosts, identities and infrastructure involved in the incident</p></div></div>
+              <Badge color="cyan">{scenario.assets?.length || 0} assets</Badge>
             </div>
             {scenario.assets?.length ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="p-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                 {scenario.assets.map((asset: any) => (
-                  <div key={asset.id} className="p-3 bg-[#0c0e16] border border-[#434655] rounded-lg">
-                    <p className="text-sm font-semibold text-[#e1e2ed] mb-2 flex items-center gap-2">
-                      <Icon name="computer" className="text-[#b4c5ff]" />
-                      {asset.hostname}
-                    </p>
-                    <div className="space-y-1 text-xs text-[#8d90a0]">
-                      <p>IP: <span className="font-mono text-[#b4c5ff]">{asset.ip}</span></p>
-                      <p>Type: <span className="text-[#c3c6d7]">{asset.type}</span></p>
-                      <p>Owner: <span className="text-[#c3c6d7]">{asset.owner}</span></p>
+                  <div key={asset.id || asset.hostname || asset.name} className="p-4 bg-black/15 border border-white/[0.08] hover:border-cyan-500/20 rounded-xl transition-all">
+                    <div className="flex items-start justify-between gap-3 mb-4"><span className="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center"><Icon name={asset.type === "server" ? "dns" : asset.type === "network" ? "router" : "computer"} className="text-xl text-cyan-300" /></span><Badge color="gray">{asset.type || "endpoint"}</Badge></div>
+                    <p className="text-sm font-semibold text-[#edf0fa] mb-3">{asset.hostname || asset.name || "Unnamed asset"}</p>
+                    <div className="space-y-2 text-xs text-[#7f8799]">
+                      <p className="flex justify-between gap-3"><span>IP address</span><span className="font-mono text-[#a9bfff]">{asset.ip || "Not assigned"}</span></p>
+                      <p className="flex justify-between gap-3"><span>Platform</span><span className="text-[#c3c6d7] text-right">{asset.os || asset.platform || "Unknown"}</span></p>
+                      <p className="flex justify-between gap-3"><span>Role / owner</span><span className="text-[#c3c6d7] text-right">{asset.owner || asset.role || "Unassigned"}</span></p>
                     </div>
                   </div>
                 ))}
@@ -525,13 +538,13 @@ export function ScenarioDetailPage() {
                 <Card key={String(label)}><Icon name={String(icon)} className="text-xl text-[#b4c5ff]" /><p className="text-2xl font-bold text-[#e1e2ed] mt-3">{String(count)}</p><p className="text-xs text-[#8d90a0] mt-1">{String(label)}</p></Card>
               ))}
             </div>
-            <Card>
-              <h3 className="text-sm font-semibold text-[#e1e2ed] mb-3">Generated evidence preview</h3>
+            <Card className="p-0 overflow-hidden">
+              <div className="p-5 border-b border-white/[0.08] bg-white/[0.018] flex items-center gap-3"><span className="w-9 h-9 rounded-xl bg-emerald-500/10 flex items-center justify-center"><Icon name="travel_explore" className="text-emerald-300" /></span><div><h3 className="text-sm font-semibold text-[#edf0fa]">Generated Evidence Preview</h3><p className="text-xs text-[#7f8799] mt-0.5">Representative records available to assigned analysts</p></div></div>
               {evidence.events.length + evidence.traffic.length + evidence.traces.length + evidence.artifacts.length === 0 ? <EmptyState icon="travel_explore" title="No evidence generated" description="Run AI generation to create logs, traffic, traces, and artifacts." /> : (
-                <div className="space-y-2">
-                  {evidence.events.slice(0, 5).map((item) => <div key={`event-${item.id}`} className="p-3 rounded-lg bg-[#0c0e16] border border-[#434655] text-xs"><Badge color="blue">event</Badge><span className="ml-2 text-[#c3c6d7] font-mono">{item.host}</span><p className="mt-1 text-[#e1e2ed]">{item.message}</p></div>)}
-                  {evidence.traffic.slice(0, 3).map((item) => <div key={`flow-${item.id}`} className="p-3 rounded-lg bg-[#0c0e16] border border-[#434655] text-xs"><Badge color="cyan">traffic</Badge><span className="ml-2 text-[#b4c5ff] font-mono">{item.src_ip}:{item.src_port} → {item.dst_ip}:{item.dst_port}</span><p className="mt-1 text-[#c3c6d7]">{item.summary}</p></div>)}
-                  {evidence.traces.slice(0, 3).map((item) => <div key={`trace-${item.id}`} className="p-3 rounded-lg bg-[#0c0e16] border border-[#434655] text-xs"><Badge color="purple">trace</Badge><span className="ml-2 text-[#e1e2ed]">{item.host} · {item.process_name}</span><p className="mt-1 text-[#c3c6d7]">{item.summary}</p></div>)}
+                <div className="p-5 space-y-2">
+                  {evidence.events.slice(0, 5).map((item) => <div key={`event-${item.id}`} className="p-3.5 rounded-xl bg-black/15 border border-white/[0.075] text-xs hover:border-[#557ff0]/20 transition-colors"><Badge color={item.is_malicious ? "red" : "blue"}>{item.event_type || "event"}</Badge><span className="ml-2 text-[#9aa9ca] font-mono">{item.host}</span>{item.mitre_id && <span className="ml-2 text-purple-300 font-mono">{item.mitre_id}</span>}<p className="mt-2 text-[#d9deeb] leading-5">{item.message}</p></div>)}
+                  {evidence.traffic.slice(0, 3).map((item) => <div key={`flow-${item.id}`} className="p-3.5 rounded-xl bg-black/15 border border-white/[0.075] text-xs hover:border-[#557ff0]/20 transition-colors"><Badge color="cyan">traffic</Badge><span className="ml-2 text-[#b4c5ff] font-mono">{item.src_ip}:{item.src_port} → {item.dst_ip}:{item.dst_port}</span><p className="mt-1 text-[#c3c6d7]">{item.summary}</p></div>)}
+                  {evidence.traces.slice(0, 3).map((item) => <div key={`trace-${item.id}`} className="p-3.5 rounded-xl bg-black/15 border border-white/[0.075] text-xs hover:border-[#557ff0]/20 transition-colors"><Badge color="purple">trace</Badge><span className="ml-2 text-[#e1e2ed]">{item.host} · {item.process_name}</span><p className="mt-1 text-[#c3c6d7]">{item.summary}</p></div>)}
                 </div>
               )}
             </Card>
