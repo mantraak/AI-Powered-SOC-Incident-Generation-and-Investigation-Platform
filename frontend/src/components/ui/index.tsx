@@ -97,7 +97,7 @@ export function Card({
 }) {
   return (
     <div
-      className={`bg-[#1d1f27]/95 border border-[#434655] rounded-2xl p-5 shadow-[0_18px_45px_-32px_rgba(0,0,0,0.95)] ${className}`}
+      className={`bg-[linear-gradient(145deg,rgba(29,33,45,.96),rgba(19,22,31,.96))] border border-white/[0.09] rounded-2xl p-5 shadow-[0_20px_55px_-36px_rgba(0,0,0,1)] ring-1 ring-black/10 ${className}`}
     >
       {children}
     </div>
@@ -123,8 +123,8 @@ export function Button({
   size?: "sm" | "md" | "lg";
 }) {
   const variants: Record<string, string> = {
-    primary:   "bg-[#2563eb] hover:bg-[#1d4ed8] text-[#eeefff] shadow-[0_2px_8px_-2px_rgba(37,99,235,0.5)]",
-    secondary: "bg-[#282a32] hover:bg-[#32343d] text-[#e1e2ed] border border-[#434655]",
+    primary:   "bg-[linear-gradient(135deg,#3975f6,#2457d6)] hover:brightness-110 text-white border border-[#6d96ff]/30 shadow-[0_8px_22px_-10px_rgba(53,109,243,.9)]",
+    secondary: "bg-white/[0.055] hover:bg-white/[0.09] text-[#e1e2ed] border border-white/[0.1] shadow-sm",
     danger:    "bg-[#93000a] hover:bg-red-800 text-[#ffdad6]",
     ghost:     "bg-transparent hover:bg-[#282a32] text-[#8d90a0] hover:text-[#e1e2ed]",
     success:   "bg-emerald-700 hover:bg-emerald-600 text-emerald-50",
@@ -139,7 +139,7 @@ export function Button({
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className={`inline-flex items-center justify-center rounded-lg font-semibold transition-all duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b4c5ff]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#11131b]
+      className={`inline-flex items-center justify-center rounded-xl font-semibold transition-all duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9fb9ff]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#090c14]
         ${variants[variant]} ${sizes[size]}
         ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
         ${className}`}
@@ -170,7 +170,7 @@ export function Input({
   rows?: number;
 }) {
   const cls =
-    "w-full bg-[#0c0e16] border border-[#434655] rounded-[10px] px-3 py-2.5 text-sm text-[#e1e2ed] placeholder-[#8d90a0] focus:outline-none focus:border-[#b4c5ff] focus:ring-2 focus:ring-[#b4c5ff]/20 transition-all";
+    "w-full bg-[#0b0f18]/90 border border-white/[0.1] rounded-xl px-3.5 py-2.5 text-sm text-[#e1e2ed] placeholder-[#737888] focus:outline-none focus:border-[#7f9eff] focus:ring-4 focus:ring-[#356df3]/15 transition-all shadow-inner";
   return (
     <div className="flex flex-col gap-1.5">
       <label className="text-[11px] font-semibold text-[#8d90a0] uppercase tracking-wider">
@@ -188,11 +188,12 @@ export function Input({
 /* ════════════════════════ Spinner ════════════════════════ */
 export function Spinner() {
   return (
-    <div className="flex items-center justify-center p-16">
+    <div className="flex flex-col items-center justify-center p-16 gap-4">
       <div className="relative w-10 h-10">
         <div className="absolute inset-0 border-2 border-[#434655] rounded-full" />
         <div className="absolute inset-0 border-2 border-transparent border-t-[#b4c5ff] rounded-full animate-spin" />
       </div>
+      <p className="text-[11px] uppercase tracking-[0.2em] text-[#737888]">Loading workspace</p>
     </div>
   );
 }
@@ -210,8 +211,8 @@ export function EmptyState({
   // Accept Material icon names (lowercase letters/underscores) OR emoji
   const isMaterial = typeof icon === "string" && /^[a-z_]+$/.test(icon);
   return (
-    <div className="flex flex-col items-center justify-center py-20 text-center">
-      <div className="w-16 h-16 bg-[#282a32] border border-[#434655] rounded-2xl flex items-center justify-center mb-5">
+    <div className="flex flex-col items-center justify-center py-20 px-6 text-center rounded-2xl border border-dashed border-white/[0.1] bg-white/[0.015]">
+      <div className="w-16 h-16 bg-[#356df3]/10 border border-[#668cff]/20 rounded-2xl flex items-center justify-center mb-5 shadow-[0_0_35px_-15px_rgba(53,109,243,.8)]">
         {isMaterial ? (
           <Icon name={icon} className="text-3xl text-[#8d90a0]" />
         ) : (

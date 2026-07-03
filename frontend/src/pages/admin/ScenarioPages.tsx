@@ -7,7 +7,7 @@ import type { Scenario } from "../../types";
 import { MitreTechniqueSelector } from "../../components/mitre/MitreTechniqueSelector";
 
 const inputCls =
-  "w-full bg-[#0c0e16] border border-[#434655] rounded-[10px] px-3 py-2 text-sm text-[#e1e2ed] placeholder-[#8d90a0] focus:outline-none focus:border-[#b4c5ff] focus:ring-2 focus:ring-[#b4c5ff]/20 transition-colors";
+  "w-full bg-[#0b0f18]/90 border border-white/[0.1] rounded-xl px-3.5 py-2.5 text-sm text-[#e1e2ed] placeholder-[#737888] focus:outline-none focus:border-[#7f9eff] focus:ring-4 focus:ring-[#356df3]/15 transition-all shadow-inner";
 
 /* ════════════════════════ Scenario List ════════════════════════ */
 export function AdminScenariosPage() {
