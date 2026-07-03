@@ -65,7 +65,7 @@ switch ($Action) {
     'start' {
         Initialize-ToolsNetwork
         if ($Tool -in @('all', 'wazuh')) { Initialize-WazuhCertificates }
-        Invoke-Compose ($profileArgs + @('up', '-d'))
+        Invoke-Compose ($profileArgs + @('up', '-d', '--wait', '--wait-timeout', '600'))
         Invoke-Compose ($profileArgs + @('ps'))
     }
     'stop' {

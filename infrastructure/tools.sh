@@ -92,7 +92,7 @@ case "$ACTION" in
       ensure_wazuh_kernel_settings
       "${compose[@]}" --profile wazuh rm -sf wazuh-security-init >/dev/null 2>&1 || true
     fi
-    "${compose[@]}" "${profile_args[@]}" up -d
+    "${compose[@]}" "${profile_args[@]}" up -d --wait --wait-timeout 600
     "${compose[@]}" "${profile_args[@]}" ps
     ;;
   stop)
