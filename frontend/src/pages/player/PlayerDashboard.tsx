@@ -38,9 +38,11 @@ export function PlayerDashboard() {
           <Spinner />
         ) : (
           <>
+            {labs.some((lab) => lab.status === "in_progress") && <Link to={`/player/labs/${labs.find((lab) => lab.status === "in_progress")!.id}`} className="block mb-5"><div className="relative overflow-hidden rounded-2xl border border-[#557ff0]/25 bg-[linear-gradient(135deg,rgba(53,109,243,.18),rgba(19,22,31,.96))] p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 group"><div className="absolute -right-10 -top-16 w-48 h-48 bg-[#356df3]/15 rounded-full blur-3xl" /><div className="relative flex items-center gap-4"><span className="w-12 h-12 rounded-xl bg-[#356df3]/20 border border-[#6f91ef]/25 flex items-center justify-center"><Icon name="radar" className="text-2xl text-[#b8c9ff] node-pulse" /></span><div><p className="text-[10px] uppercase tracking-[0.18em] text-[#83a1f3] font-semibold">Active investigation</p><h2 className="text-lg font-semibold text-[#edf0fa] mt-1">Resume Lab #{labs.find((lab) => lab.status === "in_progress")!.id}</h2></div></div><span className="relative inline-flex items-center gap-2 text-sm font-semibold text-[#c8d5ff] group-hover:translate-x-1 transition-transform">Continue investigation <Icon name="arrow_forward" /></span></div></Link>}
+
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
               {stats.map((s) => (
-                <Card key={s.label} className="h-full">
+                <Card key={s.label} className="h-full hover:border-[#6f91ef]/25 hover:-translate-y-0.5 transition-all">
                   <div className="flex items-start justify-between mb-3">
                     <div className={`w-10 h-10 rounded-lg ${s.tone.iconBg} ring-1 ${s.tone.ring} flex items-center justify-center`}>
                       <Icon name={s.icon} className={`text-xl ${s.tone.iconColor}`} />

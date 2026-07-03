@@ -30,14 +30,15 @@ export function PlayerLabsPage() {
         ) : labs.length === 0 ? (
           <EmptyState icon="biotech" title="No labs assigned" description="Your instructor will assign incident investigation labs to you." />
         ) : (
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
             {labs.map((lab) => {
               const action = actionLabels[lab.status] ?? actionLabels.assigned;
               return (
-                <Card key={lab.id} className="hover:border-[#b4c5ff]/30 transition-all">
+                <Card key={lab.id} className="group hover:border-[#6f91ef]/30 hover:-translate-y-0.5 transition-all relative overflow-hidden">
+                  <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#6288f5]/40 to-transparent opacity-0 group-hover:opacity-100" />
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-11 h-11 rounded-lg bg-[#2563eb]/15 ring-1 ring-[#2563eb]/30 flex items-center justify-center flex-shrink-0">
+                      <div className="w-12 h-12 rounded-xl bg-[#356df3]/15 ring-1 ring-[#557ff0]/25 flex items-center justify-center flex-shrink-0">
                         <Icon name="science" filled className="text-xl text-[#b4c5ff]" />
                       </div>
                       <div className="min-w-0">
@@ -50,6 +51,7 @@ export function PlayerLabsPage() {
                           {lab.started_at && ` · Started ${new Date(lab.started_at).toLocaleDateString()}`}
                           {lab.submitted_at && ` · Submitted ${new Date(lab.submitted_at).toLocaleDateString()}`}
                         </p>
+                        <div className="mt-3 h-1.5 w-40 max-w-full rounded-full bg-white/[0.06] overflow-hidden"><div className={`h-full rounded-full bg-gradient-to-r from-[#356df3] to-[#7d9dff] ${lab.status === "evaluated" ? "w-full" : lab.status === "submitted" ? "w-3/4" : lab.status === "in_progress" ? "w-1/2" : "w-1/4"}`} /></div>
                       </div>
                     </div>
                     <Link to={`/player/labs/${lab.id}`} data-testid={`open-lab-${lab.id}-btn`} className="flex-shrink-0">

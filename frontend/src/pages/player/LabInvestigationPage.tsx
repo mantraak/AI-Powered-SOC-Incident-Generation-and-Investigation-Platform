@@ -29,10 +29,10 @@ function TabBtn({
     <button
       onClick={() => onClick(id)}
       data-testid={`lab-tab-${id}`}
-      className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap flex items-center gap-2 ${
+      className={`px-3.5 py-2.5 text-sm font-medium rounded-xl transition-all whitespace-nowrap flex items-center gap-2 ${
         isActive
-          ? "border-[#b4c5ff] text-[#b4c5ff]"
-          : "border-transparent text-[#8d90a0] hover:text-[#e1e2ed]"
+          ? "bg-[#356df3]/18 text-[#c8d5ff] ring-1 ring-[#557ff0]/20 shadow-sm"
+          : "text-[#7f8799] hover:text-[#e1e2ed] hover:bg-white/[0.04]"
       }`}
     >
       <Icon name={icon} className="text-base" />
@@ -215,8 +215,12 @@ export function LabInvestigationPage() {
           }
         />
 
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+          {[["Open alerts", alerts.length, "notifications_active", "text-[#ff9e98]"], ["Telemetry", events.length, "monitor_heart", "text-[#9fb9ff]"], ["Indicators", indicators.length, "fingerprint", "text-purple-300"], ["Questions", questions.length, "quiz", "text-emerald-300"]].map(([label, value, icon, tone]) => <button key={String(label)} onClick={() => setTab(label === "Open alerts" ? "alerts" : label === "Telemetry" ? "events" : label === "Indicators" ? "indicators" : "questions")} className="text-left px-4 py-3 rounded-xl border border-white/[0.08] bg-white/[0.025] hover:bg-white/[0.05] hover:border-[#6f91ef]/25 transition-all"><div className="flex items-center justify-between"><span className="text-[10px] uppercase tracking-[0.14em] text-[#7f8799]">{label}</span><Icon name={String(icon)} className={`${tone} text-lg`} /></div><p className="text-2xl font-bold text-[#edf0fa] mt-2">{value}</p></button>)}
+        </div>
+
         {/* Tabs */}
-        <div className="flex gap-1 border-b border-[#434655] mb-6 overflow-x-auto">
+        <div className="flex gap-1.5 p-1.5 rounded-2xl border border-white/[0.08] bg-black/20 mb-6 overflow-x-auto">
           {tabConfig.map((t) => (
             <TabBtn key={t.key} id={t.key} active={tab} label={t.label} icon={t.icon} count={t.count} onClick={setTab} />
           ))}
@@ -224,13 +228,13 @@ export function LabInvestigationPage() {
 
         {/* ── Briefing ── */}
         {tab === "briefing" && (
-          <div className="space-y-4 max-w-4xl">
-            <Card>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Card className="lg:col-span-2 bg-[linear-gradient(145deg,rgba(53,109,243,.10),rgba(19,22,31,.96))]">
               <div className="flex items-center gap-2 mb-3 pb-3 border-b border-[#434655]">
                 <Icon name="menu_book" className="text-[#b4c5ff]" />
                 <h2 className="text-sm font-semibold text-[#e1e2ed]">Incident Summary</h2>
               </div>
-              <p className="text-sm text-[#c3c6d7] leading-relaxed">
+              <p className="text-base text-[#cbd1df] leading-7 max-w-4xl">
                 {scenario.summary || scenario.description || "No summary available."}
               </p>
             </Card>
@@ -241,9 +245,10 @@ export function LabInvestigationPage() {
                   <Icon name="dns" className="text-[#b4c5ff]" />
                   <h2 className="text-sm font-semibold text-[#e1e2ed]">Affected Assets</h2>
                 </div>
-                <div className="space-y-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {scenario.assets.map((a: any, i: number) => (
-                    <div key={i} className="flex items-center gap-3 text-sm py-1.5">
+                    <div key={i} className="flex items-center gap-3 text-sm p-3 rounded-xl bg-black/15 border border-white/[0.07]">
+                      <span className="w-9 h-9 rounded-lg bg-cyan-500/10 flex items-center justify-center"><Icon name={a.type === "server" ? "dns" : "computer"} className="text-cyan-300" /></span>
                       <Badge color="gray">{a.type || "asset"}</Badge>
                       <span className="text-[#e1e2ed] font-mono">{a.name}</span>
                       <span className="text-[#8d90a0]">{a.os} · {a.role}</span>
@@ -268,7 +273,7 @@ export function LabInvestigationPage() {
             )}
 
             {lab.status === "assigned" && (
-              <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-[14px] flex items-start gap-3">
+              <div className="lg:col-span-2 p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex items-start gap-3">
                 <Icon name="bolt" filled className="text-amber-300 text-xl flex-shrink-0" />
                 <p className="text-sm text-amber-200">
                   Click <strong>Start Lab</strong> in the top right to begin the investigation.
@@ -282,22 +287,22 @@ export function LabInvestigationPage() {
         {tab === "tools" && (
           !workspace ? <EmptyState icon="construction" title="Workspace unavailable" description="The isolated lab workspace is still being prepared." /> : (
             <div className="space-y-4">
-              <Card>
+              <Card className="bg-[linear-gradient(135deg,rgba(53,109,243,.12),rgba(19,22,31,.96))]">
                 <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs text-[#8d90a0] uppercase tracking-wider">Isolated workspace</p><p className="text-lg font-mono text-[#b4c5ff] mt-1">{workspace.workspace_id}</p></div><Badge color={workspace.status === "ready" ? "green" : "yellow"}>{workspace.status}</Badge></div>
                 <p className="text-xs text-[#8d90a0] mt-3">Evidence, saved searches, answers and scores are scoped to this assignment and cannot be accessed by another player.</p>
                 {workspace.detail && <p className="text-xs text-[#ffb4ab] mt-2">{workspace.detail}</p>}
               </Card>
-              {Object.entries(workspace.tools).map(([name, tool]) => (
-                  <Card key={name}>
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">{Object.entries(workspace.tools).map(([name, tool]) => (
+                  <Card key={name} className="hover:border-[#6f91ef]/30 transition-all">
                     <div className="flex flex-wrap items-start justify-between gap-4"><div><div className="flex items-center gap-2"><Icon name={name === "wazuh" ? "shield_lock" : "hub"} className="text-[#b4c5ff]" /><h3 className="font-semibold text-[#e1e2ed] capitalize">{name}</h3><Badge color={tool.scope === "isolated" ? "green" : "yellow"}>{tool.scope === "isolated" ? "Isolated" : "Shared training"}</Badge></div><p className="text-xs text-[#8d90a0] mt-1">{tool.purpose || "SOC investigation platform"}</p></div><Button onClick={() => window.open(gatewayToolUrl(name, tool.url), '_blank', 'noopener,noreferrer')}><Icon name="open_in_new" className="text-base" /> Open {name}</Button></div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4 p-3 rounded-lg bg-[#0c0e16] border border-[#434655] text-xs font-mono">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4 p-4 rounded-xl bg-black/20 border border-white/[0.08] text-xs font-mono">
                       <div className="text-[#8d90a0]">Username<div className="flex items-center gap-2 mt-1"><span className="text-[#b4c5ff] select-all break-all">{tool.username}</span><button className="text-[#8d90a0] hover:text-white" title="Copy username" onClick={() => navigator.clipboard.writeText(tool.username)}><Icon name="content_copy" className="text-sm" /></button></div></div>
                       <div className="text-[#8d90a0]">Password<div className="flex items-center gap-2 mt-1"><span className="text-[#6ee7b7] select-all break-all">{tool.password}</span><button className="text-[#8d90a0] hover:text-white" title="Copy password" onClick={() => navigator.clipboard.writeText(tool.password)}><Icon name="content_copy" className="text-sm" /></button></div></div>
                       {tool.index && <p className="text-[#8d90a0] md:col-span-2">Evidence index<br/><span className="text-[#c3c6d7] select-all">{tool.index}</span></p>}
                     </div>
                     {name === "wazuh" && <p className="text-[11px] text-[#8d90a0] mt-3 flex items-start gap-1.5"><Icon name="info" className="text-sm text-[#b4c5ff]" /> If Wazuh is already signed in as another user, sign out first or open the link in a private window, then paste these credentials.</p>}
                   </Card>
-              ))}
+              ))}</div>
             </div>
           )
         )}
@@ -306,11 +311,11 @@ export function LabInvestigationPage() {
           alerts.length === 0
             ? <EmptyState icon="notifications_active" title="No alerts generated" description="Generate the scenario first." />
             : (
-              <div className="space-y-3">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
                 {alerts.map((a) => (
-                  <Card key={a.id}>
+                  <Card key={a.id} className="hover:border-[#ff8178]/25 transition-all">
                     <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-[#93000a]/20 border border-[#93000a]/40 flex items-center justify-center flex-shrink-0">
+                      <div className="w-11 h-11 rounded-xl bg-[#93000a]/20 border border-[#93000a]/40 flex items-center justify-center flex-shrink-0 shadow-[0_0_22px_-10px_rgba(255,80,80,.8)]">
                         <Icon name="notifications_active" filled className="text-[#ffb4ab]" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -332,8 +337,8 @@ export function LabInvestigationPage() {
         {/* ── Events ── */}
         {tab === "events" && (
           <div>
-            <div className="mb-4">
-              <div className="relative max-w-md">
+            <div className="mb-4 p-3 rounded-2xl border border-white/[0.08] bg-white/[0.02] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="relative w-full max-w-lg">
                 <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8d90a0]" />
                 <input
                   value={eventFilter}
@@ -343,6 +348,7 @@ export function LabInvestigationPage() {
                   data-testid="events-filter-input"
                 />
               </div>
+              <Badge color="blue">{filteredEvents.length} visible</Badge>
             </div>
             {filteredEvents.length === 0 ? (
               <EmptyState
@@ -355,7 +361,7 @@ export function LabInvestigationPage() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
                     <thead>
-                      <tr className="bg-[#0c0e16] border-b border-[#434655] text-[#8d90a0]">
+                      <tr className="bg-black/25 border-b border-white/[0.08] text-[#858c9e]">
                         <th className="text-left py-3 px-4 font-semibold uppercase tracking-wider">Timestamp</th>
                         <th className="text-left py-3 px-4 font-semibold uppercase tracking-wider">Type</th>
                         <th className="text-left py-3 px-4 font-semibold uppercase tracking-wider">Host</th>
@@ -366,7 +372,7 @@ export function LabInvestigationPage() {
                     </thead>
                     <tbody>
                       {filteredEvents.map((e) => (
-                        <tr key={e.id} className="border-b border-[#434655]/50 hover:bg-[#282a32]/40 transition-colors">
+                        <tr key={e.id} className="border-b border-white/[0.06] hover:bg-[#356df3]/[0.045] transition-colors">
                           <td className="py-2 px-4 font-mono text-[#8d90a0] whitespace-nowrap">
                             {e.timestamp ? new Date(e.timestamp).toLocaleTimeString() : "—"}
                           </td>
@@ -389,8 +395,8 @@ export function LabInvestigationPage() {
         {tab === "traffic" && (
           traffic.length === 0 ? <EmptyState icon="lan" title="No network traffic" description="Generate the scenario to create synthetic flow records." /> : (
             <Card className="p-0 overflow-hidden"><div className="overflow-x-auto"><table className="w-full text-xs">
-              <thead><tr className="bg-[#0c0e16] border-b border-[#434655] text-[#8d90a0]">{['Time', 'Source', 'Destination', 'Protocol', 'Packets', 'Bytes', 'Finding'].map((h) => <th key={h} className="text-left py-3 px-4 font-semibold uppercase tracking-wider">{h}</th>)}</tr></thead>
-              <tbody>{traffic.map((flow) => <tr key={flow.id} className="border-b border-[#434655]/50 last:border-0">
+              <thead><tr className="bg-black/25 border-b border-white/[0.08] text-[#858c9e]">{['Time', 'Source', 'Destination', 'Protocol', 'Packets', 'Bytes', 'Finding'].map((h) => <th key={h} className="text-left py-3 px-4 font-semibold uppercase tracking-wider">{h}</th>)}</tr></thead>
+              <tbody>{traffic.map((flow) => <tr key={flow.id} className={`border-b border-white/[0.06] last:border-0 hover:bg-white/[0.025] ${flow.is_malicious ? "bg-red-500/[0.025]" : ""}`}>
                 <td className="py-3 px-4 text-[#8d90a0] font-mono">{flow.timestamp ? new Date(flow.timestamp).toLocaleTimeString() : '-'}</td>
                 <td className="py-3 px-4 text-[#c3c6d7] font-mono">{flow.src_ip}:{flow.src_port || '*'}</td>
                 <td className="py-3 px-4 text-[#b4c5ff] font-mono">{flow.dst_ip}:{flow.dst_port || '*'}</td>
@@ -403,7 +409,7 @@ export function LabInvestigationPage() {
 
         {tab === "traces" && (
           traces.length === 0 ? <EmptyState icon="account_tree" title="No execution traces" description="Generate the scenario to create correlated traces." /> : (
-            <div className="space-y-3">{traces.map((trace) => <Card key={trace.id} className={trace.is_malicious ? "border-[#93000a]/50" : ""}>
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">{traces.map((trace) => <Card key={trace.id} className={trace.is_malicious ? "border-[#93000a]/50 hover:border-[#ff8178]/35 transition-all" : "hover:border-[#6f91ef]/25 transition-all"}>
               <div className="flex flex-wrap items-start justify-between gap-3"><div><div className="flex items-center gap-2 mb-2"><Icon name="account_tree" className="text-[#b4c5ff]" /><span className="font-semibold text-[#e1e2ed]">{trace.host} · {trace.trace_type}</span>{trace.mitre_id && <Badge color="purple">{trace.mitre_id}</Badge>}</div><p className="text-sm text-[#c3c6d7]">{trace.summary}</p></div><Badge color={trace.is_malicious ? "red" : "green"}>{trace.is_malicious ? "suspicious" : "normal"}</Badge></div>
               <div className="mt-3 p-3 rounded-lg bg-[#0c0e16] border border-[#434655] text-xs font-mono text-[#8d90a0] space-y-1"><p>parent: <span className="text-[#c3c6d7]">{trace.parent_process || '-'}</span> → process: <span className="text-[#e1e2ed]">{trace.process_name || '-'}</span></p>{trace.command_line && <p>command: <span className="text-[#c3c6d7]">{trace.command_line}</span></p>}{trace.network_target && <p>target: <span className="text-[#b4c5ff]">{trace.network_target}</span></p>}</div>
             </Card>)}</div>
@@ -414,9 +420,9 @@ export function LabInvestigationPage() {
           indicators.length === 0
             ? <EmptyState icon="fingerprint" title="No IOCs" description="Generate the scenario first." />
             : (
-              <div className="space-y-2">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
                 {indicators.map((i) => (
-                  <Card key={i.id}>
+                  <Card key={i.id} className="hover:border-purple-500/25 transition-all">
                     <div className="flex items-center gap-4 flex-wrap">
                       <Badge color="blue">{i.ioc_type.toUpperCase()}</Badge>
                       <span className="font-mono text-sm text-[#b4c5ff]">{i.value}</span>
@@ -431,15 +437,15 @@ export function LabInvestigationPage() {
 
         {/* ── Artifacts ── */}
         {tab === "artifacts" && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="space-y-2">
+          <div className="grid grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)] gap-4">
+            <div className="space-y-2 lg:max-h-[36rem] lg:overflow-y-auto lg:pr-1">
               {artifacts.length === 0 ? (
                 <EmptyState icon="folder_zip" title="No artifacts" description="Generate the scenario first." />
               ) : artifacts.map((a) => (
                 <Card
                   key={a.id}
-                  className={`cursor-pointer hover:border-[#b4c5ff]/40 transition-all ${
-                    selectedArtifact?.id === a.id ? "border-[#b4c5ff] bg-[#2563eb]/10" : ""
+                  className={`cursor-pointer hover:border-[#6f91ef]/40 transition-all ${
+                    selectedArtifact?.id === a.id ? "border-[#6f91ef] bg-[#356df3]/10 shadow-[0_10px_30px_-20px_rgba(53,109,243,.8)]" : ""
                   }`}
                 >
                   <div onClick={() => setSelectedArtifact(a)} className="flex items-center gap-2.5">
@@ -459,7 +465,7 @@ export function LabInvestigationPage() {
                     <Icon name="description" className="text-[#b4c5ff]" />
                     <h3 className="text-sm font-semibold text-[#e1e2ed]">{selectedArtifact.name}</h3>
                   </div>
-                  <pre className="text-xs text-[#e1e2ed] bg-[#0c0e16] border border-[#434655] rounded-lg p-4 overflow-auto max-h-[28rem] whitespace-pre-wrap font-mono leading-relaxed">
+                  <pre className="text-xs text-[#d8deec] bg-[#080c13] border border-white/[0.08] rounded-xl p-5 overflow-auto max-h-[32rem] whitespace-pre-wrap font-mono leading-relaxed shadow-inner">
                     {selectedArtifact.content}
                   </pre>
                 </Card>
@@ -477,12 +483,13 @@ export function LabInvestigationPage() {
           questions.length === 0
             ? <EmptyState icon="quiz" title="No questions" description="Generate the scenario first." />
             : (
-              <div className="space-y-6 max-w-3xl">
+              <div className="space-y-4 max-w-4xl">
                 {questions.map((q) => {
                   const fb = answerFeedback[q.id];
                   const answered = !!fb;
                   return (
-                    <Card key={q.id}>
+                    <Card key={q.id} className="relative overflow-hidden">
+                      <span className="absolute -right-2 -top-5 text-8xl font-black text-white/[0.018]">{q.order}</span>
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-[#8d90a0] font-bold uppercase tracking-wider">Q{q.order}</span>
@@ -560,7 +567,7 @@ export function LabInvestigationPage() {
 
         {/* ── Containment ── */}
         {tab === "containment" && (
-          <div className="max-w-2xl space-y-4">
+          <div className="max-w-5xl space-y-4">
             <div className="p-3 bg-[#2563eb]/10 border border-[#2563eb]/40 rounded-lg text-sm text-[#b4c5ff] flex items-start gap-2">
               <Icon name="shield" filled className="text-base flex-shrink-0 mt-0.5" />
               Select the appropriate containment actions for this incident. Wrong actions may impact your score.
@@ -568,13 +575,13 @@ export function LabInvestigationPage() {
             {containmentOptions.length === 0 ? (
               <EmptyState icon="shield" title="No containment actions" description="Generate the scenario first." />
             ) : (
-              containmentOptions.map((ca) => {
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">{containmentOptions.map((ca) => {
                 const isSelected = selectedContainment.has(ca.id);
                 return (
                   <Card
                     key={ca.id}
                     className={`cursor-pointer transition-all ${
-                      isSelected ? "border-[#b4c5ff] bg-[#2563eb]/10" : "hover:border-[#b4c5ff]/30"
+                      isSelected ? "border-[#6f91ef] bg-[#356df3]/10 shadow-[0_12px_30px_-22px_rgba(53,109,243,.9)]" : "hover:border-[#6f91ef]/30"
                     }`}
                   >
                     <label className="flex items-start gap-3 cursor-pointer">
@@ -602,7 +609,7 @@ export function LabInvestigationPage() {
                     </label>
                   </Card>
                 );
-              })
+              })}</div>
             )}
           </div>
         )}
@@ -610,10 +617,10 @@ export function LabInvestigationPage() {
         {/* ── Score ── */}
         {tab === "score" && (
           score ? (
-            <div className="max-w-xl space-y-4">
-              <Card>
+            <div className="max-w-3xl mx-auto space-y-4">
+              <Card className="bg-[radial-gradient(circle_at_50%_0%,rgba(53,109,243,.18),transparent_60%)]">
                 <div className="text-center py-6">
-                  <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-[#2563eb]/15 border border-[#2563eb]/40 mb-4">
+                  <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-[#356df3]/15 border border-[#6f91ef]/35 mb-4 shadow-[0_0_45px_-18px_rgba(53,109,243,.9)]">
                     <Icon name="emoji_events" filled className="text-4xl text-[#b4c5ff]" />
                   </div>
                   <div className="text-6xl font-bold text-[#b4c5ff] mb-2 tracking-tight">{score.grade || "—"}</div>
