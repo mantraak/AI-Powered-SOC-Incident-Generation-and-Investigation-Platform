@@ -71,13 +71,19 @@ def _wazuh_request(client: httpx.Client, method: str, path: str, **kwargs):
     return response
 
 
-def _provision_wazuh(db: Session, lab: PlayerLab, workspace: LabWorkspace) -> dict:
+def _provision_wazuh(
+    db: Session,
+    lab: PlayerLab,
+    workspace: LabWorkspace,
+    password: str | None = None,
+    previous_index: str | None = None,
+) -> dict:
     suffix = workspace.workspace_id.replace("-", "_")
     username = f"romulus_{suffix}"
     role = f"romulus_role_{suffix}"
     tenant = f"romulus_{suffix}"
-    index_name = f"romulus-lab-{workspace.workspace_id}"
-    password = _password()
+    index_name = f"wazuh-alerts-4.x-romulus-{workspace.workspace_id}"
+    password = password or _password()
 
     auth = (settings.WAZUH_INDEXER_USERNAME, settings.WAZUH_INDEXER_PASSWORD)
     with httpx.Client(auth=auth, verify=False, timeout=20.0) as client:
@@ -88,7 +94,7 @@ def _provision_wazuh(db: Session, lab: PlayerLab, workspace: LabWorkspace) -> di
             "cluster_permissions": ["cluster_composite_ops_ro"],
             "index_permissions": [{
                 "index_patterns": [index_name],
-                "allowed_actions": ["read"],
+                "allowed_actions": ["read", "indices_monitor"],
             }],
             "tenant_permissions": [{
                 "tenant_patterns": [tenant],
@@ -109,9 +115,11 @@ def _provision_wazuh(db: Session, lab: PlayerLab, workspace: LabWorkspace) -> di
         if events:
             bulk_lines = []
             for event in events:
-                bulk_lines.append(json.dumps({"index": {"_index": index_name}}))
+                bulk_lines.append(json.dumps({"index": {"_index": index_name, "_id": f"romulus-event-{event.id}"}}))
+                mitre_ids = [event.mitre_id] if event.mitre_id else []
                 bulk_lines.append(json.dumps({
                     "@timestamp": event.timestamp.isoformat() if event.timestamp else None,
+                    "timestamp": event.timestamp.isoformat() if event.timestamp else None,
                     "workspace_id": workspace.workspace_id,
                     "lab_id": lab.id,
                     "scenario_id": lab.scenario_id,
@@ -123,6 +131,17 @@ def _provision_wazuh(db: Session, lab: PlayerLab, workspace: LabWorkspace) -> di
                     "mitre_id": event.mitre_id,
                     "is_malicious": event.is_malicious,
                     "event_data": event.event_data or {},
+                    "agent": {"id": f"{lab.id:03d}", "name": event.host or "romulus-endpoint"},
+                    "rule": {
+                        "id": f"19{event.id:04d}",
+                        "level": 12 if event.is_malicious else 3,
+                        "description": event.message or event.event_type or "Romulus training event",
+                        "groups": ["romulus", event.event_type or "training"],
+                        "mitre": {"id": mitre_ids},
+                    },
+                    "decoder": {"name": event.source or "romulus"},
+                    "location": event.host or "romulus-lab",
+                    "full_log": event.message or "Synthetic Romulus training telemetry",
                 }))
             response = _wazuh_request(
                 client,
@@ -133,6 +152,11 @@ def _provision_wazuh(db: Session, lab: PlayerLab, workspace: LabWorkspace) -> di
             )
             if response.json().get("errors"):
                 raise RuntimeError("Wazuh rejected one or more workspace events")
+
+        if previous_index and previous_index != index_name:
+            old_response = client.delete(f"{settings.WAZUH_INDEXER_URL.rstrip('/')}/{previous_index}")
+            if old_response.status_code not in (200, 404):
+                old_response.raise_for_status()
 
     return {
         "wazuh": {
@@ -172,6 +196,16 @@ def provision_lab_workspace(db: Session, lab: PlayerLab) -> LabWorkspace:
         required_tools = _scenario_tools(lab)
         credentials = _credentials(workspace)
         if "wazuh" in credentials:
+            expected_index = f"wazuh-alerts-4.x-romulus-{workspace.workspace_id}"
+            current_index = credentials["wazuh"].get("index")
+            if current_index != expected_index:
+                credentials.update(_provision_wazuh(
+                    db,
+                    lab,
+                    workspace,
+                    password=credentials["wazuh"].get("password"),
+                    previous_index=current_index,
+                ))
             tenant = credentials["wazuh"].get("tenant", f"romulus_{workspace.workspace_id}")
             credentials["wazuh"].update({
                 "url": f"{settings.WAZUH_PUBLIC_URL.rstrip('/')}/app/login?security_tenant={tenant}",

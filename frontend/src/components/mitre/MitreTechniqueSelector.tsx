@@ -52,11 +52,11 @@ export function MitreTechniqueSelector({ value, onChange }: Props) {
   };
 
   return (
-    <div className="space-y-2.5">
-      <label className="block text-[11px] text-[#8d90a0] font-semibold uppercase tracking-wider">MITRE ATT&amp;CK Techniques</label>
+    <div className="space-y-3 p-4 rounded-2xl border border-white/[0.08] bg-black/10">
+      <div className="flex items-center justify-between gap-3"><div><label className="block text-[11px] text-[#9ca3b4] font-semibold uppercase tracking-wider">MITRE ATT&amp;CK Techniques</label><p className="text-xs text-[#737b8d] mt-1">Define the behaviors analysts must identify and correlate.</p></div><span className="px-2.5 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-xs text-purple-300 font-mono">{value.length} selected</span></div>
 
       {value.length > 0 && (
-        <div className="flex flex-wrap gap-2 p-3 bg-[#0c0e16] border border-[#434655] rounded-[10px]">
+        <div className="flex flex-wrap gap-2 p-3 bg-purple-500/[0.035] border border-purple-500/15 rounded-xl">
           {value.map((techniqueId) => (
             <button
               key={techniqueId}
@@ -96,7 +96,7 @@ export function MitreTechniqueSelector({ value, onChange }: Props) {
 
       {error && <p className="text-xs text-[#ffb4ab] flex items-center gap-1"><Icon name="error" className="text-xs" />{error}</p>}
 
-      <div className="max-h-60 overflow-y-auto border border-[#434655] rounded-[10px] divide-y divide-[#434655] bg-[#0c0e16]">
+      <div className="max-h-72 overflow-y-auto border border-white/[0.08] rounded-xl divide-y divide-white/[0.06] bg-[#090d15]/80">
         {loading ? (
           <p className="p-3 text-xs text-[#8d90a0] flex items-center gap-2">
             <span className="w-3 h-3 border-2 border-[#434655] border-t-[#b4c5ff] rounded-full animate-spin" />
@@ -112,7 +112,7 @@ export function MitreTechniqueSelector({ value, onChange }: Props) {
               type="button"
               disabled={selected}
               onClick={() => add(technique.id)}
-              className="w-full p-3 text-left hover:bg-[#282a32] disabled:opacity-50 disabled:cursor-default transition-colors"
+              className="w-full p-3.5 text-left hover:bg-[#356df3]/[0.07] disabled:opacity-50 disabled:cursor-default transition-colors"
             >
               <div className="flex items-center justify-between gap-3">
                 <span className="text-sm text-[#e1e2ed]">

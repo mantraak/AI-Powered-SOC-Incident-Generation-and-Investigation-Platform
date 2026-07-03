@@ -13,6 +13,8 @@ const inputCls =
 export function AdminScenariosPage() {
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const navigate = useNavigate();
 
   const load = () => api.get("/scenarios/").then((r) => setScenarios(r.data)).finally(() => setLoading(false));
@@ -23,6 +25,12 @@ export function AdminScenariosPage() {
     await api.delete(`/scenarios/${id}`);
     load();
   };
+
+  const filtered = scenarios.filter((scenario) => {
+    const matchesStatus = statusFilter === "all" || scenario.status === statusFilter;
+    const haystack = `${scenario.title} ${scenario.description || ""} ${(scenario.mitre_techniques || []).join(" ")}`.toLowerCase();
+    return matchesStatus && haystack.includes(query.toLowerCase());
+  });
 
   return (
     <AppLayout>
@@ -38,6 +46,30 @@ export function AdminScenariosPage() {
           }
         />
 
+        {!loading && scenarios.length > 0 && (
+          <>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+              {[
+                ["Total", scenarios.length, "library_books", "text-[#9fb9ff]"],
+                ["Published", scenarios.filter((s) => s.status === "published").length, "public", "text-emerald-300"],
+                ["Ready", scenarios.filter((s) => ["ready", "generated"].includes(s.status)).length, "verified", "text-cyan-300"],
+                ["Generating", scenarios.filter((s) => s.status === "generating").length, "motion_photos_on", "text-amber-300"],
+              ].map(([label, value, icon, tone]) => (
+                <div key={String(label)} className="rounded-2xl border border-white/[0.08] bg-white/[0.025] px-4 py-3 flex items-center gap-3">
+                  <span className="w-9 h-9 rounded-xl bg-white/[0.045] flex items-center justify-center"><Icon name={String(icon)} className={`${tone} text-lg`} /></span>
+                  <div><p className="text-xl font-bold text-[#edf0fa] leading-none">{value}</p><p className="text-[10px] uppercase tracking-[0.15em] text-[#7f8799] mt-1">{label}</p></div>
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 mb-5 p-3 rounded-2xl border border-white/[0.08] bg-white/[0.02]">
+              <div className="relative flex-1"><Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 text-[#737b8d]" /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search title, description or MITRE technique" className={`${inputCls} pl-10`} /></div>
+              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className={`${inputCls} sm:w-48`}>
+                <option value="all">All lifecycle states</option><option value="draft">Draft</option><option value="generating">Generating</option><option value="ready">Ready</option><option value="published">Published</option><option value="validation_failed">Failed</option>
+              </select>
+            </div>
+          </>
+        )}
+
         {loading ? (
           <Spinner />
         ) : scenarios.length === 0 ? (
@@ -47,10 +79,12 @@ export function AdminScenariosPage() {
             description="Create your first AI-powered incident scenario to begin training your SOC analysts"
           />
         ) : (
-          <div className="space-y-3">
-            {scenarios.map((s) => (
-              <Card key={s.id} className="hover:border-[#b4c5ff]/30 transition-all" >
-                <div className="flex items-start justify-between gap-4">
+          filtered.length === 0 ? <EmptyState icon="filter_alt_off" title="No matching scenarios" description="Try another search term or lifecycle state." /> :
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            {filtered.map((s) => (
+              <Card key={s.id} className="group hover:border-[#6f91ef]/35 hover:-translate-y-0.5 transition-all duration-200 overflow-hidden relative" >
+                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#6288f5]/40 to-transparent opacity-0 group-hover:opacity-100" />
+                <div className="flex items-start justify-between gap-4 h-full">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-2 flex-wrap">
                       <Link
@@ -63,7 +97,7 @@ export function AdminScenariosPage() {
                       <StatusBadge status={s.status} />
                       <DifficultyBadge difficulty={s.difficulty} />
                     </div>
-                    {s.description && <p className="text-sm text-[#8d90a0] line-clamp-1 mb-2">{s.description}</p>}
+                    {s.description && <p className="text-sm text-[#9299aa] line-clamp-2 mb-4 leading-5 min-h-10">{s.description}</p>}
                     <div className="flex gap-4 text-xs text-[#8d90a0] flex-wrap">
                       <span className="flex items-center gap-1">
                         <Icon name="calendar_today" className="text-xs" />
@@ -82,12 +116,9 @@ export function AdminScenariosPage() {
                       )}
                     </div>
                   </div>
-                  <div className="flex gap-2 flex-shrink-0">
-                    <Button variant="secondary" size="sm" onClick={() => navigate(`/admin/scenarios/${s.id}`)}>
-                      <Icon name="visibility" className="text-base" />
-                      View
-                    </Button>
-                    <Button variant="danger" size="sm" onClick={() => handleDelete(s.id)}>
+                  <div className="flex flex-col gap-2 flex-shrink-0">
+                    <Button variant="secondary" size="sm" onClick={() => navigate(`/admin/scenarios/${s.id}`)}><Icon name="arrow_forward" className="text-base" /> Review</Button>
+                    <Button variant="ghost" size="sm" onClick={() => handleDelete(s.id)} className="hover:!text-[#ffb4ab]">
                       <Icon name="delete" className="text-base" />
                     </Button>
                   </div>
@@ -136,8 +167,8 @@ export function CreateScenarioPage() {
 
   return (
     <AppLayout>
-      <div className="p-6 lg:p-8 max-w-3xl mx-auto">
-        <PageHeader title="Create Scenario" subtitle="Configure a new AI-generated SOC incident" />
+      <div className="p-6 lg:p-8 max-w-6xl mx-auto">
+        <PageHeader title="Create Scenario" subtitle="Design the incident brief, ATT&CK scope and analyst challenge" />
 
         {error && (
           <div className="mb-4 p-3 bg-[#93000a]/25 border border-[#93000a]/60 rounded-lg text-[#ffb4ab] text-sm flex items-start gap-2">
@@ -146,7 +177,9 @@ export function CreateScenarioPage() {
           </div>
         )}
 
-        <Card>
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_280px] gap-5 items-start">
+        <Card className="p-6">
+          <div className="flex items-center gap-3 mb-6 pb-4 border-b border-white/[0.08]"><span className="w-10 h-10 rounded-xl bg-[#356df3]/15 border border-[#557ff0]/20 flex items-center justify-center"><Icon name="edit_note" className="text-xl text-[#9fb9ff]" /></span><div><h2 className="font-semibold text-[#edf0fa]">Incident blueprint</h2><p className="text-xs text-[#7f8799] mt-0.5">Provide enough context for realistic evidence generation.</p></div></div>
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="grid grid-cols-1 gap-4">
               <div>
@@ -225,6 +258,21 @@ export function CreateScenarioPage() {
             </div>
           </form>
         </Card>
+        <div className="space-y-4 lg:sticky lg:top-6">
+          <Card>
+            <p className="text-[10px] uppercase tracking-[0.18em] text-[#6f91ef] font-semibold mb-4">Build progress</p>
+            {[
+              ["1", "Incident brief", Boolean(form.title.trim())],
+              ["2", "ATT&CK scope", mitreTechniques.length > 0],
+              ["3", "Evidence inputs", Boolean(form.article_text.trim() || form.iocs.trim())],
+              ["4", "Challenge settings", true],
+            ].map(([number, label, done]) => <div key={String(number)} className="flex items-center gap-3 py-2.5 border-b border-white/[0.06] last:border-0"><span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${done ? "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/25" : "bg-white/[0.05] text-[#737b8d]"}`}>{done ? <Icon name="check" className="text-sm" /> : number}</span><span className={done ? "text-sm text-[#d9deeb]" : "text-sm text-[#737b8d]"}>{label}</span></div>)}
+          </Card>
+          <Card className="bg-[linear-gradient(145deg,rgba(53,109,243,.13),rgba(19,22,31,.96))]">
+            <Icon name="lightbulb" className="text-xl text-amber-300" /><h3 className="text-sm font-semibold text-[#edf0fa] mt-3">Authoring guidance</h3><p className="text-xs text-[#9299aa] mt-2 leading-5">Advanced scenarios work best with 3–6 related ATT&CK techniques, multiple assets and a mix of endpoint, identity and network telemetry.</p>
+          </Card>
+        </div>
+        </div>
       </div>
     </AppLayout>
   );
@@ -296,7 +344,7 @@ export function ScenarioDetailPage() {
   return (
     <AppLayout>
       <div className="p-6 lg:p-8 max-w-7xl mx-auto">
-        <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
+        <div className="flex items-start justify-between mb-5 gap-4 flex-wrap p-5 rounded-2xl border border-white/[0.08] bg-[linear-gradient(135deg,rgba(53,109,243,.10),rgba(255,255,255,.015))]">
           <div>
             <button
               onClick={() => navigate("/admin/scenarios")}
@@ -305,7 +353,8 @@ export function ScenarioDetailPage() {
               <Icon name="arrow_back" className="text-xs" />
               Back to Scenarios
             </button>
-            <h1 className="text-2xl font-bold text-[#e1e2ed] tracking-tight">{scenario.title}</h1>
+            <p className="text-[10px] uppercase tracking-[0.2em] text-[#6f91ef] font-semibold mb-1">Scenario #{scenario.id}</p>
+            <h1 className="text-2xl font-bold text-[#edf0fa] tracking-[-0.025em]">{scenario.title}</h1>
             <div className="flex gap-2 mt-2 items-center">
               <StatusBadge status={scenario.status} />
               <DifficultyBadge difficulty={scenario.difficulty} />
@@ -333,17 +382,26 @@ export function ScenarioDetailPage() {
           </div>
         </div>
 
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+          {[
+            ["Events", evidence.events.length, "list_alt"],
+            ["Network flows", evidence.traffic.length, "lan"],
+            ["Traces", evidence.traces.length, "account_tree"],
+            ["Artifacts", evidence.artifacts.length, "folder_zip"],
+          ].map(([label, value, icon]) => <button key={String(label)} onClick={() => setTab("evidence")} className="text-left px-4 py-3 rounded-xl border border-white/[0.08] bg-white/[0.025] hover:bg-white/[0.05] hover:border-[#6f91ef]/25 transition-all"><div className="flex items-center justify-between"><span className="text-[10px] uppercase tracking-[0.14em] text-[#7f8799]">{label}</span><Icon name={String(icon)} className="text-[#7798f0]" /></div><p className="text-2xl font-bold text-[#edf0fa] mt-2">{value}</p></button>)}
+        </div>
+
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 border-b border-[#434655] overflow-x-auto">
+        <div className="flex gap-1.5 mb-6 p-1.5 rounded-2xl border border-white/[0.08] bg-black/20 overflow-x-auto">
           {tabs.map((t) => (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
               data-testid={`tab-${t.key}`}
-              className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex items-center gap-2 ${
+              className={`px-4 py-2.5 text-sm font-medium transition-all rounded-xl whitespace-nowrap flex items-center gap-2 ${
                 tab === t.key
-                  ? "border-[#b4c5ff] text-[#b4c5ff]"
-                  : "border-transparent text-[#8d90a0] hover:text-[#e1e2ed]"
+                  ? "bg-[#356df3]/18 text-[#c8d5ff] ring-1 ring-[#557ff0]/20 shadow-sm"
+                  : "text-[#7f8799] hover:text-[#e1e2ed] hover:bg-white/[0.04]"
               }`}
             >
               <Icon name={t.icon} className="text-base" />
