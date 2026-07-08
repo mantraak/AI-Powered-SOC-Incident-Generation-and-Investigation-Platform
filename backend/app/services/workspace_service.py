@@ -161,13 +161,25 @@ def _provision_wazuh(
             if old_response.status_code not in (200, 404):
                 old_response.raise_for_status()
 
+    # Create an isolated Discover data view in this workspace tenant. Players
+    # investigate synthetic evidence here instead of Wazuh agent-management UI.
+    data_view_id = f"romulus-{workspace.workspace_id}"
+    with httpx.Client(auth=(username, password), verify=False, timeout=30.0) as dashboard_client:
+        response = dashboard_client.post(
+            f"{settings.WAZUH_DASHBOARD_URL.rstrip('/')}/wazuh/api/saved_objects/index-pattern/{data_view_id}",
+            params={"overwrite": "true"},
+            headers={"osd-xsrf": "romulus", "securitytenant": tenant},
+            json={"attributes": {"title": index_name, "timeFieldName": "timestamp"}},
+        )
+        response.raise_for_status()
+
     return {
         "wazuh": {
             "username": username,
             "password": password,
             "tenant": tenant,
             "index": index_name,
-            "url": f"{settings.WAZUH_PUBLIC_URL.rstrip('/')}/app/login?security_tenant={tenant}",
+            "url": f"{settings.WAZUH_PUBLIC_URL.rstrip('/')}/app/discover?security_tenant={tenant}#/?_a=(index:'{data_view_id}')",
             "scope": "isolated",
             "purpose": "Dedicated SIEM evidence index and private dashboard tenant",
         }
@@ -212,7 +224,7 @@ def provision_lab_workspace(db: Session, lab: PlayerLab) -> LabWorkspace:
             ))
             tenant = credentials["wazuh"].get("tenant", f"romulus_{workspace.workspace_id}")
             credentials["wazuh"].update({
-                "url": f"{settings.WAZUH_PUBLIC_URL.rstrip('/')}/app/login?security_tenant={tenant}",
+                "url": credentials["wazuh"].get("url", f"{settings.WAZUH_PUBLIC_URL.rstrip('/')}/app/discover?security_tenant={tenant}"),
                 "scope": "isolated",
                 "purpose": "Dedicated SIEM evidence index and private dashboard tenant",
             })

@@ -54,6 +54,7 @@ services:
       AI_API_ENDPOINT: ${AI_API_ENDPOINT:-https://integrate.api.nvidia.com/v1/chat/completions}
       AI_MODEL: ${AI_MODEL:-meta/llama-3.3-70b-instruct}
       WAZUH_INDEXER_URL: https://wazuh.indexer:9200
+      WAZUH_DASHBOARD_URL: https://wazuh.dashboard:5601
       WAZUH_INDEXER_USERNAME: admin
       WAZUH_INDEXER_PASSWORD: ${WAZUH_INDEXER_PASSWORD:-SecretPassword}
       WAZUH_PUBLIC_URL: ${WAZUH_PUBLIC_URL:-https://localhost:48173/wazuh}

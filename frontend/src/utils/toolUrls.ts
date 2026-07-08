@@ -18,6 +18,7 @@ export function gatewayToolUrl(toolId: string, fallback: string): string {
       gatewayUrl.pathname = configuredUrl.pathname;
     }
     gatewayUrl.search = configuredUrl.search;
+    gatewayUrl.hash = configuredUrl.hash;
   } catch {
     // A malformed optional fallback must not break same-origin tool launch.
   }
