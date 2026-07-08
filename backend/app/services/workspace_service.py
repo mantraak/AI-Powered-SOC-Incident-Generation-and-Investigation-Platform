@@ -93,8 +93,11 @@ def _provision_wazuh(
         _wazuh_request(client, "PUT", f"/_plugins/_security/api/roles/{role}", json={
             "cluster_permissions": ["cluster_composite_ops_ro"],
             "index_permissions": [{
-                "index_patterns": [index_name],
+                # Wazuh searches its configured wildcard. DLS keeps results
+                # restricted to this workspace even when other lab indices match.
+                "index_patterns": ["wazuh-alerts-*"],
                 "allowed_actions": ["read", "indices_monitor"],
+                "dls": json.dumps({"term": {"workspace_id": workspace.workspace_id}}),
             }],
             "tenant_permissions": [{
                 "tenant_patterns": [tenant],
@@ -198,14 +201,15 @@ def provision_lab_workspace(db: Session, lab: PlayerLab) -> LabWorkspace:
         if "wazuh" in credentials:
             expected_index = f"wazuh-alerts-4.x-romulus-{workspace.workspace_id}"
             current_index = credentials["wazuh"].get("index")
-            if current_index != expected_index:
-                credentials.update(_provision_wazuh(
-                    db,
-                    lab,
-                    workspace,
-                    password=credentials["wazuh"].get("password"),
-                    previous_index=current_index,
-                ))
+            # Idempotently refresh the role as permissions evolve. Event IDs
+            # are deterministic, so this does not duplicate evidence.
+            credentials.update(_provision_wazuh(
+                db,
+                lab,
+                workspace,
+                password=credentials["wazuh"].get("password"),
+                previous_index=current_index if current_index != expected_index else None,
+            ))
             tenant = credentials["wazuh"].get("tenant", f"romulus_{workspace.workspace_id}")
             credentials["wazuh"].update({
                 "url": f"{settings.WAZUH_PUBLIC_URL.rstrip('/')}/app/login?security_tenant={tenant}",
