@@ -10,8 +10,11 @@ import { AdminScenariosPage, CreateScenarioPage, ScenarioDetailPage } from "./pa
 import { AdminUsersPage } from "./pages/admin/UsersPage";
 import { AdminLabsPage } from "./pages/admin/LabsPage";
 import { AdminToolsPage } from "./pages/admin/ToolsPage";
+<<<<<<< HEAD
 import { AdminCollabLabsPage } from "./pages/admin/CollabLabsPage";
 import { AdminCollabLabDetailPage } from "./pages/admin/CollabLabDetailPage";
+=======
+>>>>>>> 06aa3bad5cbf649d56764f464d5221c3b197ed85
 import { ModeratorPage } from "./pages/admin/ModeratorPage";
 import { AISettingsPage } from "./pages/admin/AISettingsPage";
 
@@ -19,8 +22,11 @@ import { AISettingsPage } from "./pages/admin/AISettingsPage";
 import { PlayerDashboard } from "./pages/player/PlayerDashboard";
 import { PlayerLabsPage } from "./pages/player/PlayerLabsPage";
 import { LabInvestigationPage } from "./pages/player/LabInvestigationPage";
+<<<<<<< HEAD
 import { TeamLabsPage } from "./pages/player/TeamLabsPage";
 import { TeamLabDashboardPage } from "./pages/player/TeamLabDashboardPage";
+=======
+>>>>>>> 06aa3bad5cbf649d56764f464d5221c3b197ed85
 
 function ProtectedRoute({ children, role }: { children: JSX.Element; role?: "admin" | "player" }) {
   const { user, loading } = useAuth();
@@ -53,8 +59,11 @@ export default function App() {
           <Route path="/admin/scenarios/:id" element={<ProtectedRoute role="admin"><ScenarioDetailPage /></ProtectedRoute>} />
           <Route path="/admin/users" element={<ProtectedRoute role="admin"><AdminUsersPage /></ProtectedRoute>} />
           <Route path="/admin/labs" element={<ProtectedRoute role="admin"><AdminLabsPage /></ProtectedRoute>} />
+<<<<<<< HEAD
           <Route path="/admin/collab-labs" element={<ProtectedRoute role="admin"><AdminCollabLabsPage /></ProtectedRoute>} />
           <Route path="/admin/collab-labs/:id" element={<ProtectedRoute role="admin"><AdminCollabLabDetailPage /></ProtectedRoute>} />
+=======
+>>>>>>> 06aa3bad5cbf649d56764f464d5221c3b197ed85
           <Route path="/admin/tools" element={<ProtectedRoute role="admin"><AdminToolsPage /></ProtectedRoute>} />
           <Route path="/admin/moderator" element={<ProtectedRoute role="admin"><ModeratorPage /></ProtectedRoute>} />
           <Route path="/admin/ai-settings" element={<ProtectedRoute role="admin"><AISettingsPage /></ProtectedRoute>} />
@@ -63,8 +72,11 @@ export default function App() {
           <Route path="/player/dashboard" element={<ProtectedRoute><PlayerDashboard /></ProtectedRoute>} />
           <Route path="/player/labs" element={<ProtectedRoute><PlayerLabsPage /></ProtectedRoute>} />
           <Route path="/player/labs/:id" element={<ProtectedRoute><LabInvestigationPage /></ProtectedRoute>} />
+<<<<<<< HEAD
           <Route path="/player/team-labs" element={<ProtectedRoute><TeamLabsPage /></ProtectedRoute>} />
           <Route path="/player/team-labs/:id" element={<ProtectedRoute><TeamLabDashboardPage /></ProtectedRoute>} />
+=======
+>>>>>>> 06aa3bad5cbf649d56764f464d5221c3b197ed85
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

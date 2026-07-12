@@ -18,6 +18,7 @@ class User(TimestampMixin, Base):
     role = Column(Enum(UserRole), default=UserRole.player, nullable=False)
     is_active = Column(Boolean, default=True)
 
+<<<<<<< HEAD
     # Relationships. passive_deletes=True: let PostgreSQL's ON DELETE CASCADE
     # (set on the FK columns in lab.py/score.py/player_answer.py) do the
     # cleanup when a user is deleted, instead of SQLAlchemy first trying to
@@ -26,3 +27,9 @@ class User(TimestampMixin, Base):
     labs = relationship("PlayerLab", back_populates="player", passive_deletes=True)
     scores = relationship("PlayerScore", back_populates="player", passive_deletes=True)
     answers = relationship("PlayerAnswer", back_populates="player", passive_deletes=True)
+=======
+    # Relationships
+    labs = relationship("PlayerLab", back_populates="player")
+    scores = relationship("PlayerScore", back_populates="player")
+    answers = relationship("PlayerAnswer", back_populates="player")
+>>>>>>> 06aa3bad5cbf649d56764f464d5221c3b197ed85

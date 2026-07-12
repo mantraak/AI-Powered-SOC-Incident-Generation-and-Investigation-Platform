@@ -1,7 +1,11 @@
 from fastapi import APIRouter
+<<<<<<< HEAD
 from app.api.v1.endpoints import (
     auth, users, scenarios, labs, investigation, tools, mitre, moderator, ai_settings, lab_groups,
 )
+=======
+from app.api.v1.endpoints import auth, users, scenarios, labs, investigation, tools, mitre, moderator, ai_settings
+>>>>>>> 06aa3bad5cbf649d56764f464d5221c3b197ed85
 
 api_router = APIRouter()
 
@@ -14,5 +18,8 @@ api_router.include_router(tools.router, prefix="/tools", tags=["tools"])
 api_router.include_router(mitre.router, prefix="/mitre", tags=["mitre"])
 api_router.include_router(moderator.router, prefix="/moderator", tags=["moderator"])
 api_router.include_router(ai_settings.router, prefix="/ai-settings", tags=["ai-settings"])
+<<<<<<< HEAD
 # Collaborative multi-analyst labs (additive - does not touch /labs above).
 api_router.include_router(lab_groups.router, prefix="/lab-groups", tags=["lab-groups"])
+=======
+>>>>>>> 06aa3bad5cbf649d56764f464d5221c3b197ed85

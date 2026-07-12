@@ -27,7 +27,11 @@ services:
 
   mitre-sync:
     build:
+<<<<<<< HEAD
       context: ../backend
+=======
+      context: ./backend
+>>>>>>> 06aa3bad5cbf649d56764f464d5221c3b197ed85
       dockerfile: Dockerfile
     restart: "no"
     command: ["python", "-m", "app.services.mitre_sync"]
@@ -41,7 +45,11 @@ services:
 
   backend:
     build:
+<<<<<<< HEAD
       context: ../backend
+=======
+      context: ./backend
+>>>>>>> 06aa3bad5cbf649d56764f464d5221c3b197ed85
       dockerfile: Dockerfile
     command: ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
     restart: unless-stopped
@@ -54,6 +62,10 @@ services:
       AI_API_ENDPOINT: ${AI_API_ENDPOINT:-https://integrate.api.nvidia.com/v1/chat/completions}
       AI_MODEL: ${AI_MODEL:-meta/llama-3.3-70b-instruct}
       WAZUH_INDEXER_URL: https://wazuh.indexer:9200
+<<<<<<< HEAD
+=======
+      WAZUH_DASHBOARD_URL: https://wazuh.dashboard:5601
+>>>>>>> 06aa3bad5cbf649d56764f464d5221c3b197ed85
       WAZUH_INDEXER_USERNAME: admin
       WAZUH_INDEXER_PASSWORD: ${WAZUH_INDEXER_PASSWORD:-SecretPassword}
       WAZUH_PUBLIC_URL: ${WAZUH_PUBLIC_URL:-https://localhost:48173/wazuh}
@@ -77,7 +89,11 @@ services:
       mitre-sync:
         condition: service_completed_successfully
     volumes:
+<<<<<<< HEAD
       - ../backend:/app
+=======
+      - ./backend:/app
+>>>>>>> 06aa3bad5cbf649d56764f464d5221c3b197ed85
       - mitre_data:/app/data/mitre:ro
     working_dir: /app
     networks:
@@ -92,7 +108,11 @@ services:
 
   frontend:
     build:
+<<<<<<< HEAD
       context: ../frontend
+=======
+      context: ./frontend
+>>>>>>> 06aa3bad5cbf649d56764f464d5221c3b197ed85
       dockerfile: Dockerfile
     restart: unless-stopped
     healthcheck:
@@ -105,6 +125,7 @@ services:
       backend:
         condition: service_healthy
 
+<<<<<<< HEAD
   # Generates the gateway's TLS cert/key into a shared volume before nginx
   # starts. If infrastructure/wazuh/certs/wazuh.dashboard*.pem have already
   # been provisioned (e.g. via docker-compose.tools.yml / the Wazuh stack),
@@ -139,17 +160,26 @@ services:
       - ./wazuh/certs:/wazuh-certs:ro
       - gateway_certs:/certs
 
+=======
+>>>>>>> 06aa3bad5cbf649d56764f464d5221c3b197ed85
   nginx:
     image: nginx:alpine
     restart: unless-stopped
     ports:
       - "${ROMULUS_PORT:-48173}:443"
     volumes:
+<<<<<<< HEAD
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - gateway_certs:/etc/nginx/certs:ro
     depends_on:
       gateway-cert-init:
         condition: service_completed_successfully
+=======
+      - ./infrastructure/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./infrastructure/wazuh/certs/wazuh.dashboard.pem:/etc/nginx/certs/gateway.pem:ro
+      - ./infrastructure/wazuh/certs/wazuh.dashboard-key.pem:/etc/nginx/certs/gateway-key.pem:ro
+    depends_on:
+>>>>>>> 06aa3bad5cbf649d56764f464d5221c3b197ed85
       backend:
         condition: service_healthy
       frontend:
@@ -161,7 +191,10 @@ services:
 volumes:
   postgres_data:
   mitre_data:
+<<<<<<< HEAD
   gateway_certs:
+=======
+>>>>>>> 06aa3bad5cbf649d56764f464d5221c3b197ed85
 
 networks:
   soc-tools:

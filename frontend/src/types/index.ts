@@ -140,6 +140,7 @@ export interface MitreTechnique {
   url?: string;
 }
 
+<<<<<<< HEAD
 /* ════════════════════════ Collaborative Labs ════════════════════════ */
 export type LabGroupRole = "owner" | "lead_analyst" | "analyst" | "observer";
 export type TaskStatus = "pending" | "in_progress" | "completed";
@@ -296,6 +297,8 @@ export interface AdminLabGroupList {
   page_size: number;
 }
 
+=======
+>>>>>>> 06aa3bad5cbf649d56764f464d5221c3b197ed85
 export interface ModeratorAnalysis {
   title: string;
   executive_summary: string;

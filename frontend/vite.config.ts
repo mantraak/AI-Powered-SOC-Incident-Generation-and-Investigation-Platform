@@ -16,7 +16,10 @@ export default defineConfig({
       "/api": {
         target: API_TARGET,
         changeOrigin: true,
+<<<<<<< HEAD
         ws: true, // needed for /api/v1/lab-groups/ws/{id} (collaborative lab realtime channel)
+=======
+>>>>>>> 06aa3bad5cbf649d56764f464d5221c3b197ed85
       },
     },
   },

@@ -14,6 +14,7 @@ from app.models.ai_setting import AISetting
 from app.models.traffic import ScenarioTraffic
 from app.models.trace import ScenarioTrace
 from app.models.lab_workspace import LabWorkspace
+<<<<<<< HEAD
 from app.models.collaboration import (
     LabGroup,
     LabGroupMember,
@@ -27,3 +28,5 @@ from app.models.collaboration import (
     PersonalProgress,
     SharedEvidence,
 )
+=======
+>>>>>>> 06aa3bad5cbf649d56764f464d5221c3b197ed85

@@ -7,7 +7,11 @@ from app.db.base import Base, TimestampMixin
 class PlayerLab(TimestampMixin, Base):
     __tablename__ = "player_labs"
 
+<<<<<<< HEAD
     player_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+=======
+    player_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+>>>>>>> 06aa3bad5cbf649d56764f464d5221c3b197ed85
     scenario_id = Column(Integer, ForeignKey("scenarios.id"), nullable=False)
     status = Column(String, default="assigned")  # assigned, in_progress, submitted, evaluated
     started_at = Column(DateTime(timezone=True))
