@@ -1,0 +1,142 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
+@import "tailwindcss";
+
+/* ───────────────────────────── Romulus design tokens ───────────────────────────── */
+:root {
+  --bg:                   #090c14;
+  --surface:              #171b26;
+  --surface-low:          #191b23;
+  --surface-lowest:       #0c0e16;
+  --surface-high:         #282a32;
+  --surface-highest:      #32343d;
+  --surface-bright:       #373942;
+  --on-surface:           #e1e2ed;
+  --on-surface-variant:   #c3c6d7;
+  --outline:              #8d90a0;
+  --outline-variant:      #434655;
+  --primary:              #9fb9ff;
+  --primary-container:    #356df3;
+  --on-primary:           #002a78;
+  --on-primary-container: #eeefff;
+  --secondary:            #b9c7e0;
+  --secondary-container:  #3c4a5e;
+  --tertiary:             #ffb596;
+  --tertiary-container:   #bc4800;
+  --error:                #ffb4ab;
+  --error-container:      #93000a;
+  --on-error-container:   #ffdad6;
+  --success:              #6ee7b7;
+  --warning:              #ffcf76;
+}
+
+html, body, #root { height: 100%; }
+
+body {
+  background:
+    radial-gradient(circle at 84% -8%, rgba(53, 109, 243, 0.18), transparent 34rem),
+    radial-gradient(circle at 12% 92%, rgba(14, 165, 233, 0.07), transparent 28rem),
+    var(--bg);
+  color: var(--on-surface);
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: .025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.8'/%3E%3C/svg%3E");
+  z-index: 9999;
+}
+
+::selection {
+  color: #ffffff;
+  background: rgba(37, 99, 235, 0.65);
+}
+
+.app-workspace::before {
+  content: "";
+  position: fixed;
+  inset: 0 0 0 15rem;
+  pointer-events: none;
+  opacity: 0.22;
+  background-image:
+    linear-gradient(rgba(180, 197, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(180, 197, 255, 0.035) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: linear-gradient(to bottom, black, transparent 72%);
+}
+
+button, a, input, textarea, select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+input, textarea, select { color-scheme: dark; }
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--on-surface);
+  -webkit-box-shadow: 0 0 0 1000px #0c1019 inset;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+table tbody tr { transition: background-color 160ms ease, border-color 160ms ease; }
+table th { white-space: nowrap; }
+
+.page-enter { animation: pageEnter 360ms cubic-bezier(.2,.75,.25,1) both; }
+@keyframes pageEnter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 1023px) {
+  .app-workspace::before { inset: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+code, pre, .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  font-size: inherit;
+  line-height: 1;
+  vertical-align: middle;
+  display: inline-block;
+  user-select: none;
+}
+
+/* ───────────────────────────── Scrollbars ───────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #434655; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: #8d90a0; }
+
+/* ───────────────────────────── Animations ───────────────────────────── */
+.node-pulse { animation: romulusPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+@keyframes romulusPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: .55; transform: scale(1.15); }
+}
+
+/* Subtle radial background glow for auth/landing pages */
+.bg-romulus-glow {
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(53, 109, 243, 0.2), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 100%, rgba(14, 165, 233, 0.09), transparent 70%),
+    #090c14;
+}

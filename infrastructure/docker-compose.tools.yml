@@ -1,0 +1,419 @@
+name: ai-soc-tools
+
+services:
+  wazuh-certs:
+    image: wazuh/wazuh-certs-generator:0.0.4
+    profiles: [setup]
+    environment:
+      CERT_TOOL_VERSION: "4.14"
+    volumes:
+      - ./wazuh/certs:/certificates
+      - ./wazuh/certs.yml:/config/certs.yml:ro
+
+  wazuh-indexer:
+    image: wazuh/wazuh-indexer:${WAZUH_VERSION:-4.14.5}
+    profiles: [wazuh]
+    hostname: wazuh.indexer
+    restart: unless-stopped
+    environment:
+      OPENSEARCH_JAVA_OPTS: -Xms1g -Xmx1g
+    ulimits:
+      memlock: {soft: -1, hard: -1}
+      nofile: {soft: 65536, hard: 65536}
+    volumes:
+      - wazuh-indexer-data:/var/lib/wazuh-indexer
+      - ./wazuh/certs/root-ca.pem:/usr/share/wazuh-indexer/config/certs/root-ca.pem:ro
+      - ./wazuh/certs/wazuh.indexer-key.pem:/usr/share/wazuh-indexer/config/certs/wazuh.indexer.key:ro
+      - ./wazuh/certs/wazuh.indexer.pem:/usr/share/wazuh-indexer/config/certs/wazuh.indexer.pem:ro
+      - ./wazuh/certs/admin.pem:/usr/share/wazuh-indexer/config/certs/admin.pem:ro
+      - ./wazuh/certs/admin-key.pem:/usr/share/wazuh-indexer/config/certs/admin-key.pem:ro
+      - ./wazuh/indexer/opensearch.yml:/usr/share/wazuh-indexer/config/opensearch.yml:ro
+      - ./wazuh/indexer/internal_users.yml:/usr/share/wazuh-indexer/config/opensearch-security/internal_users.yml:ro
+    networks:
+      soc-tools:
+        aliases: [wazuh.indexer]
+    healthcheck:
+      test: [CMD-SHELL, "curl -ks -u admin:${WAZUH_INDEXER_PASSWORD:-SecretPassword} https://127.0.0.1:9200/_cluster/health >/dev/null || exit 1"]
+      start_period: 60s
+      interval: 15s
+      timeout: 5s
+      retries: 20
+
+  wazuh-security-init:
+    image: wazuh/wazuh-indexer:${WAZUH_VERSION:-4.14.5}
+    profiles: [wazuh]
+    restart: "no"
+    entrypoint: ["/bin/bash", "-c"]
+    environment:
+      WAZUH_INDEXER_PASSWORD: ${WAZUH_INDEXER_PASSWORD:-SecretPassword}
+    command:
+      - |
+        ready=false
+        for readiness_attempt in {1..60}; do
+          if curl -ks --connect-timeout 2 --max-time 5 https://127.0.0.1:9200 >/dev/null; then
+            ready=true
+            break
+          fi
+          echo "Waiting for Wazuh indexer ($${readiness_attempt}/60)..."
+          sleep 5
+        done
+        if [ "$${ready}" != "true" ]; then
+          echo "Wazuh indexer did not expose HTTPS within 5 minutes."
+          exit 1
+        fi
+        if curl -ksf --connect-timeout 2 --max-time 5 -u "admin:$${WAZUH_INDEXER_PASSWORD}" https://127.0.0.1:9200/_cluster/health >/dev/null; then
+          echo "Wazuh security index is already initialized."
+          exit 0
+        fi
+        export JAVA_HOME=/usr/share/wazuh-indexer/jdk
+        for attempt in {1..5}; do
+          if timeout 60s bash /usr/share/wazuh-indexer/plugins/opensearch-security/tools/securityadmin.sh \
+            -cd /usr/share/wazuh-indexer/config/opensearch-security/ \
+            -icl -nhnv -h 127.0.0.1 -p 9200 \
+            -cacert /usr/share/wazuh-indexer/config/certs/root-ca.pem \
+            -cert /usr/share/wazuh-indexer/config/certs/admin.pem \
+            -key /usr/share/wazuh-indexer/config/certs/admin-key.pem; then
+            exit 0
+          fi
+          echo "Security initialization attempt $${attempt} failed; retrying..."
+          sleep 5
+        done
+        exit 1
+    volumes:
+      - ./wazuh/certs/root-ca.pem:/usr/share/wazuh-indexer/config/certs/root-ca.pem:ro
+      - ./wazuh/certs/admin.pem:/usr/share/wazuh-indexer/config/certs/admin.pem:ro
+      - ./wazuh/certs/admin-key.pem:/usr/share/wazuh-indexer/config/certs/admin-key.pem:ro
+      - ./wazuh/indexer/internal_users.yml:/usr/share/wazuh-indexer/config/opensearch-security/internal_users.yml:ro
+    network_mode: "service:wazuh-indexer"
+    depends_on:
+      wazuh-indexer:
+        condition: service_started
+
+  wazuh-manager:
+    image: wazuh/wazuh-manager:${WAZUH_VERSION:-4.14.5}
+    profiles: [wazuh]
+    hostname: wazuh.manager
+    restart: unless-stopped
+    environment:
+      INDEXER_URL: https://wazuh.indexer:9200
+      INDEXER_USERNAME: admin
+      INDEXER_PASSWORD: ${WAZUH_INDEXER_PASSWORD:-SecretPassword}
+      FILEBEAT_SSL_VERIFICATION_MODE: full
+      SSL_CERTIFICATE_AUTHORITIES: /etc/ssl/root-ca.pem
+      SSL_CERTIFICATE: /etc/ssl/filebeat.pem
+      SSL_KEY: /etc/ssl/filebeat.key
+      API_USERNAME: wazuh-wui
+      API_PASSWORD: ${WAZUH_API_PASSWORD:-MyS3cr37P450r.*-}
+    ulimits:
+      memlock: {soft: -1, hard: -1}
+      nofile: {soft: 655360, hard: 655360}
+    volumes:
+      - wazuh-api-config:/var/ossec/api/configuration
+      - wazuh-etc:/var/ossec/etc
+      - wazuh-logs:/var/ossec/logs
+      - wazuh-queue:/var/ossec/queue
+      - wazuh-integrations:/var/ossec/integrations
+      - wazuh-active-response:/var/ossec/active-response/bin
+      - filebeat-etc:/etc/filebeat
+      - filebeat-var:/var/lib/filebeat
+      - ./wazuh/certs/root-ca-manager.pem:/etc/ssl/root-ca.pem:ro
+      - ./wazuh/certs/wazuh.manager.pem:/etc/ssl/filebeat.pem:ro
+      - ./wazuh/certs/wazuh.manager-key.pem:/etc/ssl/filebeat.key:ro
+    networks:
+      soc-tools:
+        aliases: [wazuh.manager]
+    depends_on:
+      wazuh-security-init:
+        condition: service_completed_successfully
+
+  wazuh-dashboard:
+    image: wazuh/wazuh-dashboard:${WAZUH_VERSION:-4.14.5}
+    profiles: [wazuh]
+    hostname: wazuh.dashboard
+    restart: unless-stopped
+    environment:
+      INDEXER_USERNAME: admin
+      INDEXER_PASSWORD: ${WAZUH_INDEXER_PASSWORD:-SecretPassword}
+      WAZUH_API_URL: https://wazuh.manager
+      DASHBOARD_USERNAME: kibanaserver
+      DASHBOARD_PASSWORD: kibanaserver
+      API_USERNAME: wazuh-wui
+      API_PASSWORD: ${WAZUH_API_PASSWORD:-MyS3cr37P450r.*-}
+    volumes:
+      - ./wazuh/certs/wazuh.dashboard.pem:/usr/share/wazuh-dashboard/certs/wazuh-dashboard.pem:ro
+      - ./wazuh/certs/wazuh.dashboard-key.pem:/usr/share/wazuh-dashboard/certs/wazuh-dashboard-key.pem:ro
+      - ./wazuh/certs/root-ca.pem:/usr/share/wazuh-dashboard/certs/root-ca.pem:ro
+      - ./wazuh/dashboard/opensearch_dashboards.yml:/usr/share/wazuh-dashboard/config/opensearch_dashboards.yml:ro
+      - wazuh-dashboard-config:/usr/share/wazuh-dashboard/data/wazuh/config
+    networks:
+      soc-tools:
+        aliases: [wazuh.dashboard]
+    depends_on:
+      wazuh-security-init:
+        condition: service_completed_successfully
+      wazuh-manager:
+        condition: service_started
+
+  misp-db:
+    image: mariadb:10.11
+    profiles: [misp]
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: misp
+      MYSQL_USER: misp
+      MYSQL_PASSWORD: ${MISP_DB_PASSWORD:-ChangeMeMispDb2026}
+      MYSQL_ROOT_PASSWORD: ${MISP_DB_ROOT_PASSWORD:-ChangeMeMispRoot2026}
+      TZ: ${TZ:-UTC}
+    command: --innodb-buffer-pool-size=512M --innodb-log-file-size=128M
+    volumes:
+      - misp-db-data:/var/lib/mysql
+    networks: [soc-tools]
+    healthcheck:
+      test: [CMD-SHELL, "mariadb-admin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD --silent"]
+      start_period: 30s
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  misp-redis:
+    image: valkey/valkey:7.2-alpine
+    profiles: [misp]
+    restart: unless-stopped
+    command: [valkey-server, --requirepass, "${MISP_REDIS_PASSWORD:-ChangeMe-MISP-Redis-2026}"]
+    volumes:
+      - misp-redis-data:/data
+    networks: [soc-tools]
+    healthcheck:
+      test: [CMD-SHELL, "valkey-cli -a '${MISP_REDIS_PASSWORD:-ChangeMe-MISP-Redis-2026}' ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  misp-modules:
+    image: ghcr.io/misp/misp-docker/misp-modules:${MISP_MODULES_TAG:-v3.0.8}
+    profiles: [misp]
+    restart: unless-stopped
+    networks: [soc-tools]
+
+  misp:
+    image: ghcr.io/misp/misp-docker/misp-core:${MISP_CORE_TAG:-v2.5.42}
+    profiles: [misp]
+    restart: unless-stopped
+    cap_add: [AUDIT_WRITE]
+    environment:
+      BASE_URL: ${MISP_BASE_URL:-https://localhost:48173/misp}
+      ADMIN_EMAIL: ${MISP_ADMIN_EMAIL:-admin@admin.test}
+      ADMIN_PASSWORD: ${MISP_ADMIN_PASSWORD:-ChangeMe-MISP-2026!}
+      ADMIN_KEY: ${MISP_ADMIN_KEY:-0123456789abcdef0123456789abcdef01234567}
+      ADMIN_ORG: AI-SOC-Lab
+      MYSQL_HOST: misp-db
+      MYSQL_DATABASE: misp
+      MYSQL_USER: misp
+      MYSQL_PASSWORD: ${MISP_DB_PASSWORD:-ChangeMeMispDb2026}
+      REDIS_HOST: misp-redis
+      REDIS_PASSWORD: ${MISP_REDIS_PASSWORD:-ChangeMe-MISP-Redis-2026}
+      MISP_MODULES_FQDN: http://misp-modules
+      DISABLE_IPV6: "true"
+      ENABLE_BACKGROUND_UPDATES: "false"
+      TZ: ${TZ:-UTC}
+    volumes:
+      - misp-config:/var/www/MISP/app/Config
+      - misp-files:/var/www/MISP/app/files
+      - misp-gnupg:/var/www/MISP/.gnupg
+    networks:
+      soc-tools:
+        aliases: [misp]
+    depends_on:
+      misp-db: {condition: service_healthy}
+      misp-redis: {condition: service_healthy}
+      misp-modules: {condition: service_started}
+
+  thehive-cassandra:
+    image: cassandra:4.1
+    profiles: [thehive]
+    restart: unless-stopped
+    environment:
+      CASSANDRA_CLUSTER_NAME: TheHive
+      CASSANDRA_AUTHENTICATOR: PasswordAuthenticator
+      CASSANDRA_NUM_TOKENS: 4
+      HEAP_NEWSIZE: 256M
+      MAX_HEAP_SIZE: 1G
+    volumes:
+      - thehive-cassandra-data:/var/lib/cassandra
+    networks: [soc-tools]
+    healthcheck:
+      test: [CMD-SHELL, "cqlsh -u cassandra -p cassandra -e 'describe keyspaces' || exit 1"]
+      start_period: 120s
+      interval: 15s
+      timeout: 10s
+      retries: 20
+
+  thehive-elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.19.0
+    profiles: [thehive]
+    restart: unless-stopped
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "true"
+      xpack.security.http.ssl.enabled: "false"
+      ELASTIC_PASSWORD: ${THEHIVE_ES_PASSWORD:-ChangeMe-TheHive-ES-2026}
+      ES_JAVA_OPTS: -Xms1g -Xmx1g
+    ulimits:
+      memlock: {soft: -1, hard: -1}
+      nofile: {soft: 65536, hard: 65536}
+    volumes:
+      - thehive-es-data:/usr/share/elasticsearch/data
+    networks: [soc-tools]
+    healthcheck:
+      test: [CMD-SHELL, "curl -fsS -u elastic:${THEHIVE_ES_PASSWORD:-ChangeMe-TheHive-ES-2026} http://localhost:9200/_cluster/health >/dev/null || exit 1"]
+      start_period: 60s
+      interval: 15s
+      timeout: 5s
+      retries: 20
+
+  thehive-storage-init:
+    image: alpine:3.22
+    profiles: [thehive]
+    restart: "no"
+    user: "0:0"
+    command: ["sh", "-c", "chown -R 1000:1000 /thehive-files && chmod 750 /thehive-files"]
+    volumes:
+      - thehive-files:/thehive-files
+
+  thehive:
+    image: strangebee/thehive:${THEHIVE_VERSION:-5.7.3}
+    profiles: [thehive]
+    restart: unless-stopped
+    command:
+      - --secret
+      - ${THEHIVE_SECRET:-change-me-to-a-random-string-at-least-32-characters}
+      - --cql-hostnames
+      - thehive-cassandra
+      - --cql-username
+      - cassandra
+      - --cql-password
+      - cassandra
+      - --cql-datacenter
+      - datacenter1
+      - --cql-keyspace
+      - thehive
+      - --es-hostnames
+      - thehive-elasticsearch
+      - --es-username
+      - elastic
+      - --es-password
+      - ${THEHIVE_ES_PASSWORD:-ChangeMe-TheHive-ES-2026}
+      - --es-index
+      - thehive
+      - --storage-directory
+      - /opt/thp/thehive/files
+      - --cluster-min-nodes-count
+      - "1"
+      - --no-config-cortex
+    environment:
+      JAVA_OPTS: -Xms1g -Xmx1g -XX:MaxMetaspaceSize=400m
+    volumes:
+      - thehive-files:/opt/thp/thehive/files
+    networks:
+      soc-tools:
+        aliases: [thehive]
+    depends_on:
+      thehive-cassandra: {condition: service_healthy}
+      thehive-elasticsearch: {condition: service_healthy}
+      thehive-storage-init: {condition: service_completed_successfully}
+    healthcheck:
+      test: [CMD-SHELL, "curl -fsS http://localhost:9000/thehive/api/status >/dev/null || exit 1"]
+      start_period: 90s
+      interval: 15s
+      timeout: 5s
+      retries: 20
+
+  prometheus:
+    image: prom/prometheus:v3.4.1
+    profiles: [monitoring]
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.enable-lifecycle
+      - --web.external-url=https://localhost:48173/prometheus/
+      - --web.route-prefix=/prometheus/
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    networks: [soc-tools]
+
+  blackbox-exporter:
+    image: prom/blackbox-exporter:v0.27.0
+    profiles: [monitoring]
+    restart: unless-stopped
+    command: [--config.file=/etc/blackbox_exporter/config.yml]
+    volumes:
+      - ./monitoring/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
+    networks: [soc-tools]
+
+  grafana:
+    image: grafana/grafana:${GRAFANA_VERSION:-12.0.2}
+    profiles: [monitoring]
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-ChangeMe-Grafana-2026!}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_ROOT_URL: https://localhost:48173/grafana/
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    networks: [soc-tools]
+    depends_on: [prometheus, blackbox-exporter]
+
+  semgrep:
+    image: semgrep/semgrep:1.127.1
+    profiles: [security]
+    command: [semgrep, scan, --config, p/default, /src]
+    volumes:
+      - ../:/src:ro
+
+  gitleaks:
+    image: ghcr.io/gitleaks/gitleaks:v8.27.2
+    profiles: [security]
+    command: [detect, --source=/src, --no-banner, --redact]
+    volumes:
+      - ../:/src:ro
+
+  trivy:
+    image: aquasec/trivy:0.63.0
+    profiles: [security]
+    command: [fs, --scanners, vuln,secret,misconfig, /src]
+    volumes:
+      - ../:/src:ro
+      - trivy-cache:/root/.cache/trivy
+
+networks:
+  soc-tools:
+    name: ai-soc-tools
+    external: true
+
+volumes:
+  wazuh-indexer-data:
+  wazuh-api-config:
+  wazuh-etc:
+  wazuh-logs:
+  wazuh-queue:
+  wazuh-integrations:
+  wazuh-active-response:
+  filebeat-etc:
+  filebeat-var:
+  wazuh-dashboard-config:
+  misp-db-data:
+  misp-redis-data:
+  misp-config:
+  misp-files:
+  misp-gnupg:
+  thehive-cassandra-data:
+  thehive-es-data:
+  thehive-files:
+  prometheus-data:
+  grafana-data:
+  trivy-cache:

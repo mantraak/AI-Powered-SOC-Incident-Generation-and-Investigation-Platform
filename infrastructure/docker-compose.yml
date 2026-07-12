@@ -1,0 +1,169 @@
+name: romulus
+
+services:
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: aisoc
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mitre-sync:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    restart: "no"
+    command: ["python", "-m", "app.services.mitre_sync"]
+    environment:
+      MITRE_ATTACK_VERSION: "19.1"
+      MITRE_STIX_URL: https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack-19.1.json
+      MITRE_CATALOG_PATH: /app/data/mitre/catalog.json
+      MITRE_FORCE_SYNC: ${MITRE_FORCE_SYNC:-false}
+    volumes:
+      - mitre_data:/app/data/mitre
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    command: ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/aisoc
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:-ChangeThisInProduction!SecretKey42}
+      ACCESS_TOKEN_EXPIRE_MINUTES: 480
+      NVIDIA_API_KEY: ${NVIDIA_API_KEY:-}
+      AI_API_ENDPOINT: ${AI_API_ENDPOINT:-https://integrate.api.nvidia.com/v1/chat/completions}
+      AI_MODEL: ${AI_MODEL:-meta/llama-3.3-70b-instruct}
+      WAZUH_INDEXER_URL: https://wazuh.indexer:9200
+      WAZUH_INDEXER_USERNAME: admin
+      WAZUH_INDEXER_PASSWORD: ${WAZUH_INDEXER_PASSWORD:-SecretPassword}
+      WAZUH_PUBLIC_URL: ${WAZUH_PUBLIC_URL:-https://localhost:48173/wazuh}
+      MISP_PUBLIC_URL: ${MISP_PUBLIC_URL:-https://localhost:48173/misp}
+      MISP_TRAINING_USERNAME: ${MISP_ADMIN_EMAIL:-admin@admin.test}
+      MISP_TRAINING_PASSWORD: ${MISP_ADMIN_PASSWORD:-ChangeMe-MISP-2026!}
+      THEHIVE_PUBLIC_URL: ${THEHIVE_PUBLIC_URL:-https://localhost:48173/thehive}
+      THEHIVE_TRAINING_USERNAME: ${THEHIVE_ADMIN_EMAIL:-admin@thehive.local}
+      THEHIVE_TRAINING_PASSWORD: ${THEHIVE_ADMIN_PASSWORD:-secret}
+      GRAFANA_PUBLIC_URL: ${GRAFANA_PUBLIC_URL:-https://localhost:48173/grafana}
+      PROMETHEUS_PUBLIC_URL: ${PROMETHEUS_PUBLIC_URL:-https://localhost:48173/prometheus}
+      GRAFANA_TRAINING_USERNAME: ${GRAFANA_ADMIN_USER:-admin}
+      GRAFANA_TRAINING_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-ChangeMe-Grafana-2026!}
+      MITRE_ATTACK_VERSION: "19.1"
+      MITRE_CATALOG_PATH: /app/data/mitre/catalog.json
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mitre-sync:
+        condition: service_completed_successfully
+    volumes:
+      - ../backend:/app
+      - mitre_data:/app/data/mitre:ro
+    working_dir: /app
+    networks:
+      - default
+      - soc-tools
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  # Generates the gateway's TLS cert/key into a shared volume before nginx
+  # starts. If infrastructure/wazuh/certs/wazuh.dashboard*.pem have already
+  # been provisioned (e.g. via docker-compose.tools.yml / the Wazuh stack),
+  # those are reused as-is. Otherwise a self-signed cert is generated on the
+  # spot - so `docker compose up --build` produces a working HTTPS gateway
+  # with zero manual steps, even without ever touching the Wazuh tools stack.
+  gateway-cert-init:
+    image: alpine:3.20
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        apk add --no-cache openssl >/dev/null
+        mkdir -p /certs
+        if [ -s /wazuh-certs/wazuh.dashboard.pem ] && [ -s /wazuh-certs/wazuh.dashboard-key.pem ] \
+           && openssl x509 -in /wazuh-certs/wazuh.dashboard.pem -noout 2>/dev/null; then
+          echo "[gateway-cert-init] Using provisioned Wazuh dashboard certificate."
+          cp /wazuh-certs/wazuh.dashboard.pem /certs/gateway.pem
+          cp /wazuh-certs/wazuh.dashboard-key.pem /certs/gateway-key.pem
+        elif [ -s /certs/gateway.pem ] && [ -s /certs/gateway-key.pem ] \
+           && openssl x509 -in /certs/gateway.pem -noout 2>/dev/null; then
+          echo "[gateway-cert-init] Existing gateway certificate is valid, reusing it."
+        else
+          echo "[gateway-cert-init] No certificate provisioned yet - generating a self-signed one."
+          openssl req -x509 -nodes -newkey rsa:2048 -days 825 \
+            -keyout /certs/gateway-key.pem -out /certs/gateway.pem \
+            -subj "/CN=localhost" \
+            -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
+        fi
+    volumes:
+      - ./wazuh/certs:/wazuh-certs:ro
+      - gateway_certs:/certs
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "${ROMULUS_PORT:-48173}:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - gateway_certs:/etc/nginx/certs:ro
+    depends_on:
+      gateway-cert-init:
+        condition: service_completed_successfully
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    networks:
+      - default
+      - soc-tools
+
+volumes:
+  postgres_data:
+  mitre_data:
+  gateway_certs:
+
+networks:
+  soc-tools:
+    external: true
+    name: ai-soc-tools

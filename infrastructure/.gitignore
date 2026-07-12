@@ -1,0 +1,4 @@
+.env.tools
+wazuh/certs/*
+!wazuh/certs/.gitkeep
+
