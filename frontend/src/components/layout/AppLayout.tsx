@@ -12,13 +12,6 @@ const adminNav = [
   { path: "/admin/tools",         label: "SOC Tools",          icon: "construction"  },
   { path: "/admin/moderator",     label: "AI Moderator",       icon: "psychology"    },
   { path: "/admin/ai-settings",   label: "AI Settings",        icon: "settings"      },
-  { path: "/admin/dashboard",   label: "Dashboard",    icon: "dashboard"     },
-  { path: "/admin/scenarios",   label: "Scenarios",    icon: "manage_search" },
-  { path: "/admin/users",       label: "Users",        icon: "group"         },
-  { path: "/admin/labs",        label: "Labs",         icon: "biotech"       },
-  { path: "/admin/tools",       label: "SOC Tools",    icon: "construction"  },
-  { path: "/admin/moderator",   label: "AI Moderator", icon: "psychology"    },
-  { path: "/admin/ai-settings", label: "AI Settings",  icon: "settings"      },
 ];
 
 const playerNav = [
