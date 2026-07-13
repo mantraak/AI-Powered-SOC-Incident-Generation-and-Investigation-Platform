@@ -22,13 +22,9 @@ class Settings(BaseSettings):
     MODERATOR_MAX_LINKS: int = 4
     MODERATOR_MAX_SOURCE_CHARS: int = 12000
     MODERATOR_MAX_DOWNLOAD_BYTES: int = 2_000_000
-
     WAZUH_API_URL: str = "https://wazuh.manager:55000"
     WAZUH_INDEXER_URL: str = "https://wazuh.indexer:9200"
-<<<<<<< HEAD
-=======
     WAZUH_DASHBOARD_URL: str = "https://wazuh.dashboard:5601"
->>>>>>> 06aa3bad5cbf649d56764f464d5221c3b197ed85
     WAZUH_INDEXER_USERNAME: str = "admin"
     WAZUH_INDEXER_PASSWORD: str = "SecretPassword"
     MISP_URL: str = "https://misp"

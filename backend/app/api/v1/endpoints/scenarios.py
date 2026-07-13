@@ -29,8 +29,6 @@ def validate_mitre_ids(technique_ids: List[str]):
 def list_scenarios(db: Session = Depends(get_db), current_user: User = Depends(get_current_admin)):
     return db.query(Scenario).order_by(Scenario.created_at.desc()).all()
 
-
-<<<<<<< HEAD
 @router.get("/published", response_model=List[ScenarioOut])
 def list_published_scenarios(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Player-accessible list of published scenarios - used e.g. when starting
@@ -38,8 +36,6 @@ def list_published_scenarios(db: Session = Depends(get_db), current_user: User =
     return db.query(Scenario).filter(Scenario.status == "published").order_by(Scenario.created_at.desc()).all()
 
 
-=======
->>>>>>> 06aa3bad5cbf649d56764f464d5221c3b197ed85
 @router.post("/", response_model=ScenarioOut, status_code=201)
 def create_scenario(
     scenario_in: ScenarioCreate,

@@ -93,16 +93,11 @@ def _provision_wazuh(
         _wazuh_request(client, "PUT", f"/_plugins/_security/api/roles/{role}", json={
             "cluster_permissions": ["cluster_composite_ops_ro"],
             "index_permissions": [{
-<<<<<<< HEAD
-                "index_patterns": [index_name],
-                "allowed_actions": ["read", "indices_monitor"],
-=======
                 # Wazuh searches its configured wildcard. DLS keeps results
                 # restricted to this workspace even when other lab indices match.
                 "index_patterns": ["wazuh-alerts-*"],
                 "allowed_actions": ["read", "indices_monitor"],
                 "dls": json.dumps({"term": {"workspace_id": workspace.workspace_id}}),
->>>>>>> 06aa3bad5cbf649d56764f464d5221c3b197ed85
             }],
             "tenant_permissions": [{
                 "tenant_patterns": [tenant],
@@ -166,10 +161,6 @@ def _provision_wazuh(
             if old_response.status_code not in (200, 404):
                 old_response.raise_for_status()
 
-<<<<<<< HEAD
-=======
-    # Create an isolated Discover data view in this workspace tenant. Players
-    # investigate synthetic evidence here instead of Wazuh agent-management UI.
     data_view_id = f"romulus-{workspace.workspace_id}"
     with httpx.Client(auth=(username, password), verify=False, timeout=30.0) as dashboard_client:
         response = dashboard_client.post(
@@ -180,18 +171,13 @@ def _provision_wazuh(
         )
         response.raise_for_status()
 
->>>>>>> 06aa3bad5cbf649d56764f464d5221c3b197ed85
     return {
         "wazuh": {
             "username": username,
             "password": password,
             "tenant": tenant,
             "index": index_name,
-<<<<<<< HEAD
-            "url": f"{settings.WAZUH_PUBLIC_URL.rstrip('/')}/app/login?security_tenant={tenant}",
-=======
             "url": f"{settings.WAZUH_PUBLIC_URL.rstrip('/')}/app/discover?security_tenant={tenant}#/?_a=(index:'{data_view_id}')",
->>>>>>> 06aa3bad5cbf649d56764f464d5221c3b197ed85
             "scope": "isolated",
             "purpose": "Dedicated SIEM evidence index and private dashboard tenant",
         }
@@ -219,27 +205,19 @@ def deprovision_lab_workspace(db: Session, lab: PlayerLab) -> None:
 
 def provision_lab_workspace(db: Session, lab: PlayerLab) -> LabWorkspace:
     workspace = db.query(LabWorkspace).filter(LabWorkspace.lab_id == lab.id).first()
+
     if workspace and workspace.status == "ready":
         required_tools = _scenario_tools(lab)
         credentials = _credentials(workspace)
+
         if "wazuh" in credentials:
             expected_index = f"wazuh-alerts-4.x-romulus-{workspace.workspace_id}"
             current_index = credentials["wazuh"].get("index")
-<<<<<<< HEAD
-            if current_index != expected_index:
-                credentials.update(_provision_wazuh(
-                    db,
-                    lab,
-                    workspace,
-                    password=credentials["wazuh"].get("password"),
-                    previous_index=current_index,
-                ))
-            tenant = credentials["wazuh"].get("tenant", f"romulus_{workspace.workspace_id}")
-            credentials["wazuh"].update({
-                "url": f"{settings.WAZUH_PUBLIC_URL.rstrip('/')}/app/login?security_tenant={tenant}",
-=======
+
             # Idempotently refresh the role as permissions evolve. Event IDs
-            # are deterministic, so this does not duplicate evidence.
+            # are deterministic, so this does not duplicate evidence. Only
+            # pass previous_index (to trigger cleanup of the old index) when
+            # the workspace's index name has actually changed.
             credentials.update(_provision_wazuh(
                 db,
                 lab,
@@ -247,19 +225,24 @@ def provision_lab_workspace(db: Session, lab: PlayerLab) -> LabWorkspace:
                 password=credentials["wazuh"].get("password"),
                 previous_index=current_index if current_index != expected_index else None,
             ))
+
             tenant = credentials["wazuh"].get("tenant", f"romulus_{workspace.workspace_id}")
             credentials["wazuh"].update({
-                "url": credentials["wazuh"].get("url", f"{settings.WAZUH_PUBLIC_URL.rstrip('/')}/app/discover?security_tenant={tenant}"),
->>>>>>> 06aa3bad5cbf649d56764f464d5221c3b197ed85
+                "url": credentials["wazuh"].get(
+                    "url",
+                    f"{settings.WAZUH_PUBLIC_URL.rstrip('/')}/app/discover?security_tenant={tenant}",
+                ),
                 "scope": "isolated",
                 "purpose": "Dedicated SIEM evidence index and private dashboard tenant",
             })
+
         credentials.update(_shared_tool_credentials(required_tools))
         workspace.required_tools = required_tools
         workspace.encrypted_credentials = encrypt_api_key(json.dumps(credentials))
         db.commit()
         db.refresh(workspace)
         return workspace
+
     if not workspace:
         workspace = LabWorkspace(
             lab_id=lab.id,
@@ -270,6 +253,7 @@ def provision_lab_workspace(db: Session, lab: PlayerLab) -> LabWorkspace:
         db.add(workspace)
         db.commit()
         db.refresh(workspace)
+
     try:
         credentials = _provision_wazuh(db, lab, workspace)
         credentials.update(_shared_tool_credentials(workspace.required_tools or []))
