@@ -27,7 +27,7 @@ services:
 
   mitre-sync:
     build:
-      context: ../backend
+      context: ./backend
       dockerfile: Dockerfile
     restart: "no"
     command: ["python", "-m", "app.services.mitre_sync"]
@@ -41,7 +41,7 @@ services:
 
   backend:
     build:
-      context: ../backend
+      context: ./backend
       dockerfile: Dockerfile
     command: ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
     restart: unless-stopped
@@ -92,7 +92,7 @@ services:
 
   frontend:
     build:
-      context: ../frontend
+      context: ./frontend
       dockerfile: Dockerfile
     restart: unless-stopped
     healthcheck:
