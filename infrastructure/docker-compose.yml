@@ -78,7 +78,6 @@ services:
       mitre-sync:
         condition: service_completed_successfully
     volumes:
-      - ../backend:/app
       - mitre_data:/app/data/mitre:ro
     working_dir: /app
     networks:
