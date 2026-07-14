@@ -296,6 +296,78 @@ export interface AdminLabGroupList {
   page_size: number;
 }
 
+/* ════════════════════════ Threat Feed (newsdata.io) ════════════════════════ */
+export interface NewsArticle {
+  id: string;
+  title: string;
+  link: string;
+  description: string;
+  published_at?: string;
+  source: string;
+  image_url?: string;
+  categories: string[];
+}
+
+export interface NewsFeed {
+  query: string;
+  articles: NewsArticle[];
+  next_page?: string;
+  total_results: number;
+  cached: boolean;
+}
+
+export interface NewsSettings {
+  api_key_configured: boolean;
+  source: string;
+}
+
+/* ════════════════════════ AI Assistant ════════════════════════ */
+export interface ChatSource {
+  url: string;
+  title: string;
+}
+
+export interface SearchResult {
+  title: string;
+  url: string;
+  snippet: string;
+  date?: string;
+}
+
+export interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+  guarded?: boolean;
+  sources?: ChatSource[];
+  searchResults?: SearchResult[];
+}
+
+export interface PlayerChatResponse {
+  reply: string;
+  guarded: boolean;
+  lab_id?: number;
+  scenario_title?: string;
+  search_results: SearchResult[];
+  search_error?: string;
+}
+
+export interface AdminChatResponse {
+  reply: string;
+  sources: ChatSource[];
+  source_errors: Array<{ url: string; error: string }>;
+  scenario_title?: string;
+  search_results: SearchResult[];
+  search_error?: string;
+}
+
+export interface AssistantScenarioHit {
+  id: number;
+  title: string;
+  difficulty: string;
+  status: string;
+  mitre_techniques: string[];
+}
+
 export interface ModeratorAnalysis {
   title: string;
   executive_summary: string;

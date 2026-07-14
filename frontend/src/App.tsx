@@ -14,6 +14,7 @@ import { AdminCollabLabsPage } from "./pages/admin/CollabLabsPage";
 import { AdminCollabLabDetailPage } from "./pages/admin/CollabLabDetailPage";
 import { ModeratorPage } from "./pages/admin/ModeratorPage";
 import { AISettingsPage } from "./pages/admin/AISettingsPage";
+import { AdminAIAssistantPage } from "./pages/admin/AIAssistantPage";
 
 // Player pages
 import { PlayerDashboard } from "./pages/player/PlayerDashboard";
@@ -21,6 +22,10 @@ import { PlayerLabsPage } from "./pages/player/PlayerLabsPage";
 import { LabInvestigationPage } from "./pages/player/LabInvestigationPage";
 import { TeamLabsPage } from "./pages/player/TeamLabsPage";
 import { TeamLabDashboardPage } from "./pages/player/TeamLabDashboardPage";
+import { PlayerAIAssistantPage } from "./pages/player/AIAssistantPage";
+
+// Shared pages
+import { ThreatFeedPage } from "./pages/shared/ThreatFeedPage";
 
 function ProtectedRoute({ children, role }: { children: JSX.Element; role?: "admin" | "player" }) {
   const { user, loading } = useAuth();
@@ -57,7 +62,9 @@ export default function App() {
           <Route path="/admin/collab-labs/:id" element={<ProtectedRoute role="admin"><AdminCollabLabDetailPage /></ProtectedRoute>} />
           <Route path="/admin/tools" element={<ProtectedRoute role="admin"><AdminToolsPage /></ProtectedRoute>} />
           <Route path="/admin/moderator" element={<ProtectedRoute role="admin"><ModeratorPage /></ProtectedRoute>} />
+          <Route path="/admin/ai-assistant" element={<ProtectedRoute role="admin"><AdminAIAssistantPage /></ProtectedRoute>} />
           <Route path="/admin/ai-settings" element={<ProtectedRoute role="admin"><AISettingsPage /></ProtectedRoute>} />
+          <Route path="/admin/threat-feed" element={<ProtectedRoute role="admin"><ThreatFeedPage /></ProtectedRoute>} />
 
           {/* Player routes */}
           <Route path="/player/dashboard" element={<ProtectedRoute><PlayerDashboard /></ProtectedRoute>} />
@@ -65,6 +72,8 @@ export default function App() {
           <Route path="/player/labs/:id" element={<ProtectedRoute><LabInvestigationPage /></ProtectedRoute>} />
           <Route path="/player/team-labs" element={<ProtectedRoute><TeamLabsPage /></ProtectedRoute>} />
           <Route path="/player/team-labs/:id" element={<ProtectedRoute><TeamLabDashboardPage /></ProtectedRoute>} />
+          <Route path="/player/assistant" element={<ProtectedRoute><PlayerAIAssistantPage /></ProtectedRoute>} />
+          <Route path="/player/threat-feed" element={<ProtectedRoute><ThreatFeedPage /></ProtectedRoute>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

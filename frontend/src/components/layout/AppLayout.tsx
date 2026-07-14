@@ -11,13 +11,17 @@ const adminNav = [
   { path: "/admin/collab-labs",   label: "Collaborative Labs", icon: "groups"        },
   { path: "/admin/tools",         label: "SOC Tools",          icon: "construction"  },
   { path: "/admin/moderator",     label: "AI Moderator",       icon: "psychology"    },
+  { path: "/admin/ai-assistant",  label: "AI Assistant",       icon: "smart_toy"     },
+  { path: "/admin/threat-feed",   label: "Threat Feed",        icon: "newspaper"     },
   { path: "/admin/ai-settings",   label: "AI Settings",        icon: "settings"      },
 ];
 
 const playerNav = [
-  { path: "/player/dashboard", label: "Dashboard", icon: "dashboard" },
-  { path: "/player/labs",      label: "My Labs",   icon: "biotech"   },
-  { path: "/player/team-labs", label: "Team Labs",  icon: "groups"    },
+  { path: "/player/dashboard",   label: "Dashboard",   icon: "dashboard" },
+  { path: "/player/labs",        label: "My Labs",     icon: "biotech"   },
+  { path: "/player/team-labs",   label: "Team Labs",   icon: "groups"    },
+  { path: "/player/assistant",   label: "AI Mentor",   icon: "school"    },
+  { path: "/player/threat-feed", label: "Threat Feed", icon: "newspaper" },
 ];
 
 export function AppLayout({ children }: { children: React.ReactNode }) {

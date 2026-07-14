@@ -20,6 +20,18 @@ class Settings(BaseSettings):
     AI_API_ENDPOINT: str = "https://integrate.api.nvidia.com/v1/chat/completions"
     AI_MODEL: str = "meta/llama-3.3-70b-instruct"
     MODERATOR_MAX_LINKS: int = 4
+    WEB_SEARCH_ENABLED: bool = True
+    WEB_SEARCH_MAX_RESULTS: int = 6
+    WEB_SEARCH_REGION: str = "us-en"
+    WEB_SEARCH_TIMEOUT: int = 20
+    WEB_SEARCH_FETCH_TOP: int = 2
+
+    # Threat news feed. Administrators can override the key in the UI.
+    NEWSDATA_API_KEY: Optional[str] = None
+    NEWSDATA_API_URL: str = "https://newsdata.io/api/1/latest"
+    NEWS_DEFAULT_QUERY: str = "cybersecurity OR ransomware OR data breach OR malware"
+    NEWS_LANGUAGE: str = "en"
+    NEWS_CACHE_TTL_SECONDS: int = 900
     MODERATOR_MAX_SOURCE_CHARS: int = 12000
     MODERATOR_MAX_DOWNLOAD_BYTES: int = 2_000_000
     WAZUH_API_URL: str = "https://wazuh.manager:55000"

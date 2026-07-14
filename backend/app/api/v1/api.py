@@ -1,8 +1,8 @@
 from fastapi import APIRouter
 from app.api.v1.endpoints import (
-    auth, users, scenarios, labs, investigation, tools, mitre, moderator, ai_settings, lab_groups,
+    auth, users, scenarios, labs, investigation, tools, mitre, moderator, ai_settings,
+    lab_groups, assistant, news,
 )
-from app.api.v1.endpoints import auth, users, scenarios, labs, investigation, tools, mitre, moderator, ai_settings
 
 api_router = APIRouter()
 
@@ -16,4 +16,5 @@ api_router.include_router(mitre.router, prefix="/mitre", tags=["mitre"])
 api_router.include_router(moderator.router, prefix="/moderator", tags=["moderator"])
 api_router.include_router(ai_settings.router, prefix="/ai-settings", tags=["ai-settings"])
 api_router.include_router(lab_groups.router, prefix="/lab-groups", tags=["lab-groups"])
-
+api_router.include_router(assistant.router, prefix="/assistant", tags=["assistant"])
+api_router.include_router(news.router, prefix="/news", tags=["news"])
