@@ -130,7 +130,7 @@ services:
             -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
         fi
     volumes:
-      - ./wazuh/certs:/wazuh-certs:ro
+      - ./infrastructure/wazuh/certs:/wazuh-certs:ro
       - gateway_certs:/certs
 
   nginx:
@@ -139,7 +139,7 @@ services:
     ports:
       - "${ROMULUS_PORT:-48173}:443"
     volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./infrastructure/nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - gateway_certs:/etc/nginx/certs:ro
     depends_on:
       gateway-cert-init:
