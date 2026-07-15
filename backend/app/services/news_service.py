@@ -13,11 +13,10 @@ from app.services.ai_provider import decrypt_api_key, encrypt_api_key
 # served from a short-lived in-process cache instead of hitting the API every load.
 _cache: dict[tuple, tuple[float, dict]] = {}
 
-MAX_QUERY_CHARS = 180
+MAX_QUERY_CHARS = 100
 
 CYBER_DEFAULT_QUERY = (
-    "cybersecurity OR cyber attack OR ransomware OR data breach OR malware OR "
-    "zero-day OR vulnerability OR phishing OR threat actor"
+    "cybersecurity OR ransomware OR data breach OR malware OR phishing OR vulnerability"
 )
 
 CYBER_RELEVANCE_TERMS = {
@@ -152,7 +151,9 @@ def _build_cyber_query(query: str | None) -> str:
 
     # A player/admin search like "Microsoft" or "hospital" should mean
     # cybersecurity news about that entity, not general Microsoft or hospital news.
-    scoped = f"({raw}) AND (cybersecurity OR cyber attack OR data breach OR ransomware OR malware OR vulnerability)"
+    # newsdata.io caps q at 100 chars, so reserve space for the cyber scope.
+    scope = " cybersecurity OR ransomware OR breach OR malware"
+    scoped = f"{raw[:MAX_QUERY_CHARS - len(scope)]}{scope}"
     return scoped[:MAX_QUERY_CHARS]
 
 

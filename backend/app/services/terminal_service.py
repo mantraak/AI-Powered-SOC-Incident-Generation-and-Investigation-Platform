@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import asyncio
 import re
+import threading
 from datetime import datetime, timedelta, timezone
+from typing import Callable
 
 try:
     import docker
@@ -285,3 +288,116 @@ def exec_command(db: Session, user: User, command: str, lab_id: int | None = Non
         "output": output[-20000:],
         "session": session_payload(session, settings)["session"],
     }
+
+
+def _raw_socket(sock):
+    return getattr(sock, "_sock", None) or getattr(sock, "socket", None) or sock
+
+
+def _send_socket(raw_sock, data: bytes) -> None:
+    if hasattr(raw_sock, "sendall"):
+        raw_sock.sendall(data)
+    else:
+        raw_sock.send(data)
+
+
+def open_interactive_exec(db: Session, user: User, lab_id: int | None = None):
+    """Open an interactive bash TTY inside the player's running container."""
+    settings = get_terminal_settings(db)
+    if not settings.enabled:
+        raise TerminalError("Player terminal is currently disabled by the administrator.")
+    session = expire_if_needed(db, get_active_session(db, user, lab_id))
+    if not session or session.status != "running":
+        raise TerminalError("Terminal is not running. Start or respawn it first.")
+
+    client = _docker_client()
+    try:
+        container = client.containers.get(session.container_id or session.container_name)
+        exec_info = client.api.exec_create(
+            container.id,
+            cmd="/bin/bash",
+            stdin=True,
+            tty=True,
+            workdir="/root",
+            environment={"TERM": "xterm-256color"},
+        )
+        socket_obj = client.api.exec_start(exec_info["Id"], tty=True, socket=True)
+        return exec_info["Id"], _raw_socket(socket_obj), client
+    except DockerException as exc:
+        raise TerminalError(f"Failed to open interactive terminal: {exc}") from exc
+
+
+def resize_interactive_exec(exec_id: str, client, cols: int, rows: int) -> None:
+    try:
+        client.api.exec_resize(exec_id, height=max(10, rows), width=max(20, cols))
+    except Exception:
+        pass
+
+
+async def bridge_terminal_socket(
+    websocket,
+    raw_sock,
+    on_resize: Callable[[int, int], None] | None = None,
+) -> None:
+    """Bridge Docker's raw exec socket to a browser WebSocket."""
+    loop = asyncio.get_running_loop()
+    queue: asyncio.Queue[bytes | None] = asyncio.Queue()
+    stop = threading.Event()
+
+    def reader() -> None:
+        try:
+            while not stop.is_set():
+                data = raw_sock.recv(4096)
+                if not data:
+                    break
+                loop.call_soon_threadsafe(queue.put_nowait, data)
+        except Exception:
+            pass
+        finally:
+            loop.call_soon_threadsafe(queue.put_nowait, None)
+
+    thread = threading.Thread(target=reader, daemon=True)
+    thread.start()
+
+    async def browser_to_container() -> None:
+        while True:
+            message = await websocket.receive()
+            if message.get("type") == "websocket.disconnect":
+                break
+            if message.get("text") is not None:
+                text = message["text"]
+                if text.startswith("__resize__:"):
+                    try:
+                        _, cols, rows = text.split(":", 2)
+                        if on_resize:
+                            on_resize(int(cols), int(rows))
+                    except Exception:
+                        pass
+                    continue
+                await asyncio.to_thread(_send_socket, raw_sock, text.encode("utf-8", errors="ignore"))
+            elif message.get("bytes") is not None:
+                await asyncio.to_thread(_send_socket, raw_sock, message["bytes"])
+
+    async def container_to_browser() -> None:
+        while True:
+            data = await queue.get()
+            if data is None:
+                break
+            await websocket.send_text(data.decode("utf-8", errors="replace"))
+
+    try:
+        tasks = [
+            asyncio.create_task(browser_to_container()),
+            asyncio.create_task(container_to_browser()),
+        ]
+        done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+        for task in pending:
+            task.cancel()
+        for task in done:
+            task.result()
+    finally:
+        stop.set()
+        try:
+            raw_sock.close()
+        except Exception:
+            pass

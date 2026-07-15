@@ -1,17 +1,22 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket
+from jose import JWTError, jwt
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.security import get_current_admin, get_current_player
-from app.db.session import get_db
+from app.db.session import SessionLocal, get_db
 from app.models.user import User
 from app.services.terminal_service import (
     TerminalError,
+    bridge_terminal_socket,
     exec_command,
     expire_if_needed,
     extend_session,
     get_active_session,
     get_terminal_settings,
+    open_interactive_exec,
+    resize_interactive_exec,
     session_payload,
     spawn_session,
     stop_session,
@@ -40,6 +45,17 @@ class TerminalCommand(BaseModel):
 
 def _fail(exc: TerminalError):
     raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+def _user_from_token(db: Session, token: str) -> User | None:
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        user_id = payload.get("sub")
+        if user_id is None:
+            return None
+        return db.query(User).filter(User.id == int(user_id)).first()
+    except JWTError:
+        return None
 
 
 @router.get("/settings")
@@ -138,3 +154,38 @@ def execute_terminal_command(
         return exec_command(db, current_user, payload.command, lab_id=payload.lab_id)
     except TerminalError as exc:
         _fail(exc)
+
+
+@router.websocket("/ws")
+async def terminal_ws(websocket: WebSocket, token: str = "", lab_id: int | None = None):
+    """Interactive player terminal.
+
+    Connect with:
+    ws(s)://<host>/api/v1/terminal/ws?token=<jwt>[&lab_id=123]
+    """
+    db = SessionLocal()
+    raw_sock = None
+    try:
+        user = _user_from_token(db, token)
+        if not user or user.role not in ("player", "admin"):
+            await websocket.close(code=4401)
+            return
+        try:
+            exec_id, raw_sock, client = open_interactive_exec(db, user, lab_id=lab_id)
+        except TerminalError:
+            await websocket.close(code=4400)
+            return
+
+        await websocket.accept()
+        await bridge_terminal_socket(
+            websocket,
+            raw_sock,
+            on_resize=lambda cols, rows: resize_interactive_exec(exec_id, client, cols, rows),
+        )
+    finally:
+        try:
+            if raw_sock:
+                raw_sock.close()
+        except Exception:
+            pass
+        db.close()

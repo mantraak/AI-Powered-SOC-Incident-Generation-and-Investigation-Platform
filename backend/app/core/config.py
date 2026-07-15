@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     # Threat news feed. Administrators can override the key in the UI.
     NEWSDATA_API_KEY: Optional[str] = None
     NEWSDATA_API_URL: str = "https://newsdata.io/api/1/latest"
-    NEWS_DEFAULT_QUERY: str = "cybersecurity OR cyber attack OR ransomware OR data breach OR malware OR zero-day OR vulnerability OR phishing OR threat actor"
+    NEWS_DEFAULT_QUERY: str = "cybersecurity OR ransomware OR data breach OR malware OR phishing OR vulnerability"
     NEWS_LANGUAGE: str = "en"
     NEWS_CACHE_TTL_SECONDS: int = 900
     MODERATOR_MAX_SOURCE_CHARS: int = 12000
