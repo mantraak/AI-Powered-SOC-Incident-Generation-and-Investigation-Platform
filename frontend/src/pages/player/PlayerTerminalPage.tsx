@@ -14,6 +14,12 @@ function formatRemaining(seconds?: number) {
   return `${mins}m ${secs.toString().padStart(2, "0")}s`;
 }
 
+function timeTone(seconds: number) {
+  if (seconds <= 60) return "red";
+  if (seconds <= 300) return "yellow";
+  return "green";
+}
+
 function terminalSocketUrl() {
   const token = localStorage.getItem("token") || "";
   const proto = window.location.protocol === "https:" ? "wss" : "ws";
@@ -58,6 +64,8 @@ export function PlayerTerminalPage() {
   }, [state?.session?.expires_at, tick]);
 
   const running = state?.session?.status === "running" && remaining > 0;
+  const totalSeconds = Math.max(1, (state?.settings.default_minutes || 1) * 60);
+  const remainingPct = Math.max(0, Math.min(100, (remaining / totalSeconds) * 100));
 
   const disconnectTerminal = useCallback(() => {
     if (socketRef.current) {
@@ -81,7 +89,7 @@ export function PlayerTerminalPage() {
         socket.send(`__resize__:${term.cols}:${term.rows}`);
       }
     } catch {
-      // container may be hidden during layout changes
+      // xterm can throw while hidden/resizing; harmless.
     }
   }, []);
 
@@ -93,7 +101,7 @@ export function PlayerTerminalPage() {
       cursorBlink: true,
       fontFamily: '"JetBrains Mono", "Cascadia Code", Consolas, monospace',
       fontSize: 14,
-      lineHeight: 1.15,
+      lineHeight: 1.16,
       scrollback: 5000,
       convertEol: true,
       allowProposedApi: false,
@@ -136,9 +144,7 @@ export function PlayerTerminalPage() {
       window.setTimeout(fitAndResize, 50);
     };
     ws.onmessage = (event) => {
-      if (typeof event.data === "string") {
-        term.write(event.data);
-      }
+      if (typeof event.data === "string") term.write(event.data);
     };
     ws.onerror = () => {
       setError("Terminal WebSocket failed. Check backend logs and Docker socket access.");
@@ -147,7 +153,6 @@ export function PlayerTerminalPage() {
       setConnected(false);
       term.writeln("\r\n\x1b[38;5;203m[terminal disconnected]\x1b[0m");
     };
-
     term.onData((data) => {
       if (ws.readyState === WebSocket.OPEN) ws.send(data);
     });
@@ -184,12 +189,27 @@ export function PlayerTerminalPage() {
     }
   };
 
+  const sendQuickCommand = (cmd: string) => {
+    const ws = socketRef.current;
+    if (ws?.readyState === WebSocket.OPEN) {
+      ws.send(`${cmd}\r`);
+      terminalRef.current?.focus();
+    }
+  };
+
+  const progressColor =
+    timeTone(remaining) === "red"
+      ? "bg-[#ff6b6b]"
+      : timeTone(remaining) === "yellow"
+        ? "bg-amber-300"
+        : "bg-gradient-to-r from-emerald-400 to-[#67e8f9]";
+
   return (
     <AppLayout>
       <div className="p-6 lg:p-8 max-w-7xl mx-auto">
         <PageHeader
           title="Terminal"
-          subtitle="A true interactive Ubuntu terminal: vim, tab completion, arrows, Ctrl+C, full-screen tools and shell editing all work through the browser."
+          subtitle="A browser-native Ubuntu workstation for vim, tab completion, shell history, Ctrl+C and full-screen tools."
           action={
             <Button variant="secondary" onClick={load} disabled={busy}>
               <Icon name="refresh" className="text-base" />
@@ -201,93 +221,183 @@ export function PlayerTerminalPage() {
         {loading ? <Spinner /> : !state?.available ? (
           <EmptyState icon="terminal" title="Terminal disabled" description="An administrator has disabled player terminal access." />
         ) : (
-          <div className="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-5">
-            <Card className="min-h-[690px] flex flex-col">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4 pb-4 border-b border-white/[0.08]">
-                <div className="flex items-center gap-3">
-                  <div className={`w-3 h-3 rounded-full ${connected ? "bg-emerald-400 shadow-[0_0_16px_rgba(52,211,153,.8)]" : running ? "bg-amber-300" : "bg-[#737888]"}`} />
+          <div className="space-y-5">
+            <div className="relative overflow-hidden rounded-3xl border border-[#557ff0]/25 bg-[radial-gradient(circle_at_15%_0%,rgba(53,109,243,.25),transparent_38%),linear-gradient(135deg,rgba(21,27,41,.98),rgba(9,12,20,.98))] p-5 shadow-[0_24px_70px_-42px_rgba(53,109,243,.9)]">
+              <div className="absolute -right-20 -top-24 h-64 w-64 rounded-full bg-[#356df3]/20 blur-3xl" />
+              <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+                <div className="flex items-center gap-4">
+                  <div className="relative w-14 h-14 rounded-2xl bg-[#05070d]/80 border border-[#7f9eff]/25 flex items-center justify-center">
+                    <Icon name="terminal" className="text-3xl text-[#b4c5ff]" />
+                    <span className={`absolute -right-1 -top-1 h-4 w-4 rounded-full border-2 border-[#101522] ${connected ? "bg-emerald-400" : running ? "bg-amber-300" : "bg-[#737888]"}`} />
+                  </div>
                   <div>
-                    <h2 className="font-semibold text-[#edf0fa]">Ubuntu interactive shell</h2>
-                    <p className="text-xs text-[#858b9d]">{state.settings.image}</p>
+                    <p className="text-[10px] uppercase tracking-[0.22em] text-[#83a1f3] font-semibold">Player isolated workspace</p>
+                    <h2 className="mt-1 text-xl font-bold text-[#edf0fa]">Ubuntu interactive shell</h2>
+                    <p className="mt-1 text-sm text-[#8d90a0] font-mono">{state.settings.image}</p>
                   </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  {state.session && <Badge color={running ? "green" : "gray"}>{state.session.status}</Badge>}
-                  {state.session && <Badge color="primary">{formatRemaining(remaining)}</Badge>}
-                  {connected && <Badge color="cyan">TTY connected</Badge>}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 min-w-0">
+                  <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] px-4 py-3">
+                    <p className="text-[10px] uppercase tracking-[0.16em] text-[#858b9d]">Status</p>
+                    <p className="mt-1 text-sm font-semibold text-[#edf0fa]">{connected ? "Connected" : running ? "Starting" : state.session?.status || "Idle"}</p>
+                  </div>
+                  <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] px-4 py-3">
+                    <p className="text-[10px] uppercase tracking-[0.16em] text-[#858b9d]">Time left</p>
+                    <p className={`mt-1 text-sm font-semibold ${remaining <= 60 ? "text-[#ffb4ab]" : remaining <= 300 ? "text-amber-300" : "text-emerald-300"}`}>{state.session ? formatRemaining(remaining) : "Not started"}</p>
+                  </div>
+                  <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] px-4 py-3">
+                    <p className="text-[10px] uppercase tracking-[0.16em] text-[#858b9d]">Network</p>
+                    <p className="mt-1 text-sm font-semibold text-[#edf0fa]">{state.settings.network_enabled ? "Enabled" : "Isolated"}</p>
+                  </div>
+                  <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] px-4 py-3">
+                    <p className="text-[10px] uppercase tracking-[0.16em] text-[#858b9d]">Extensions</p>
+                    <p className="mt-1 text-sm font-semibold text-[#edf0fa]">{state.session?.extensions_remaining ?? state.settings.max_extensions} left</p>
+                  </div>
                 </div>
               </div>
+              {state.session && (
+                <div className="relative mt-5 h-2 rounded-full bg-white/[0.07] overflow-hidden">
+                  <div className={`h-full rounded-full transition-all duration-500 ${progressColor}`} style={{ width: `${remainingPct}%` }} />
+                </div>
+              )}
+            </div>
 
-              {!state.session || !running ? (
-                <div className="flex-1 flex items-center justify-center">
-                  <div className="text-center max-w-md">
-                    <div className="w-16 h-16 rounded-2xl bg-[#356df3]/15 border border-[#6f91ef]/25 flex items-center justify-center mx-auto mb-4">
-                      <Icon name="terminal" className="text-3xl text-[#b4c5ff]" />
+            <div className="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-5">
+              <Card className="min-h-[700px] flex flex-col !p-0 overflow-hidden">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 px-5 py-4 border-b border-white/[0.08] bg-[#0b0f18]/70">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1.5">
+                      <span className="h-3 w-3 rounded-full bg-[#ff5f56]" />
+                      <span className="h-3 w-3 rounded-full bg-[#ffbd2e]" />
+                      <span className="h-3 w-3 rounded-full bg-[#27c93f]" />
                     </div>
-                    <h3 className="text-lg font-semibold text-[#edf0fa] mb-2">
-                      {state.session?.status === "expired" ? "Terminal expired" : "No running terminal"}
-                    </h3>
-                    <p className="text-sm text-[#8d90a0] mb-5">
-                      Start a fresh isolated container. Respawn creates a clean Ubuntu workspace.
-                    </p>
-                    <Button onClick={() => mutateSession(state.session ? "/terminal/session/respawn" : "/terminal/session")} disabled={busy}>
-                      <Icon name={state.session ? "restart_alt" : "play_arrow"} className="text-base" />
-                      {state.session ? "Respawn terminal" : "Start terminal"}
+                    <div className="hidden sm:block h-5 w-px bg-white/[0.1]" />
+                    <div>
+                      <p className="text-sm font-semibold text-[#e1e2ed]">romulus-terminal</p>
+                      <p className="text-[11px] text-[#737888]">/root · TERM=xterm-256color</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {state.session && <Badge color={running ? "green" : "gray"}>{state.session.status}</Badge>}
+                    {connected && <Badge color="cyan">TTY connected</Badge>}
+                    <Button variant="ghost" size="sm" onClick={fitAndResize} disabled={!running}>
+                      <Icon name="fit_screen" className="text-sm" />
+                      Fit
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => terminalRef.current?.focus()} disabled={!running}>
+                      <Icon name="my_location" className="text-sm" />
+                      Focus
                     </Button>
                   </div>
                 </div>
-              ) : (
-                <div className="relative flex-1 rounded-2xl bg-[#05070d] border border-white/[0.08] overflow-hidden shadow-inner">
-                  <div ref={terminalHostRef} className="absolute inset-0 p-3 terminal-host" />
-                </div>
-              )}
-            </Card>
 
-            <div className="space-y-5">
-              <Card>
-                <h3 className="font-semibold text-[#edf0fa] mb-4 flex items-center gap-2">
-                  <Icon name="timer" className="text-[#b4c5ff]" />
-                  Session control
-                </h3>
-                <div className="space-y-3 text-sm text-[#a5a9b8]">
-                  <p>Default time: <span className="text-[#edf0fa]">{state.settings.default_minutes} minutes</span></p>
-                  <p>Extension: <span className="text-[#edf0fa]">{state.settings.extension_minutes} minutes</span></p>
-                  <p>Extensions left: <span className="text-[#edf0fa]">{state.session?.extensions_remaining ?? state.settings.max_extensions}</span></p>
-                  <p>Network: <span className="text-[#edf0fa]">{state.settings.network_enabled ? "enabled" : "disabled"}</span></p>
-                </div>
-                <div className="mt-5 grid grid-cols-1 gap-2">
-                  <Button variant="secondary" onClick={() => mutateSession("/terminal/session/extend")} disabled={!running || busy || (state.session?.extensions_remaining ?? 0) <= 0}>
-                    <Icon name="more_time" className="text-base" />
-                    Extend
-                  </Button>
-                  <Button variant="secondary" onClick={() => mutateSession("/terminal/session/respawn")} disabled={busy}>
-                    <Icon name="restart_alt" className="text-base" />
-                    Respawn clean
-                  </Button>
-                  <Button variant="danger" onClick={() => mutateSession("/terminal/session", "delete")} disabled={!state.session || busy}>
-                    <Icon name="stop_circle" className="text-base" />
-                    Stop terminal
-                  </Button>
-                </div>
+                {!state.session || !running ? (
+                  <div className="flex-1 flex items-center justify-center px-5">
+                    <div className="relative overflow-hidden rounded-3xl border border-white/[0.08] bg-[#0b0f18]/70 p-8 text-center max-w-md">
+                      <div className="absolute -right-16 -top-16 h-40 w-40 rounded-full bg-[#356df3]/15 blur-3xl" />
+                      <div className="relative">
+                        <div className="w-16 h-16 rounded-2xl bg-[#356df3]/15 border border-[#6f91ef]/25 flex items-center justify-center mx-auto mb-4">
+                          <Icon name="terminal" className="text-3xl text-[#b4c5ff]" />
+                        </div>
+                        <h3 className="text-lg font-semibold text-[#edf0fa] mb-2">
+                          {state.session?.status === "expired" ? "Terminal expired" : "No running terminal"}
+                        </h3>
+                        <p className="text-sm text-[#8d90a0] mb-5">
+                          Start a fresh isolated Ubuntu workspace. Respawn gives you a clean container.
+                        </p>
+                        <Button onClick={() => mutateSession(state.session ? "/terminal/session/respawn" : "/terminal/session")} disabled={busy}>
+                          <Icon name={state.session ? "restart_alt" : "play_arrow"} className="text-base" />
+                          {state.session ? "Respawn terminal" : "Start terminal"}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="relative flex-1 bg-[#05070d] overflow-hidden shadow-inner">
+                    <div className="absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-[#7f9eff]/5 to-transparent pointer-events-none z-10" />
+                    <div ref={terminalHostRef} className="absolute inset-0 p-4 terminal-host" />
+                  </div>
+                )}
               </Card>
 
-              {error && (
-                <Card className="!border-[#93000a]/60 !bg-[#93000a]/10">
-                  <div className="flex gap-3 text-[#ffb4ab]">
-                    <Icon name="error" filled />
-                    <p className="text-sm">{error}</p>
+              <div className="space-y-5">
+                <Card>
+                  <h3 className="font-semibold text-[#edf0fa] mb-4 flex items-center gap-2">
+                    <Icon name="timer" className="text-[#b4c5ff]" />
+                    Session control
+                  </h3>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="rounded-xl bg-white/[0.035] border border-white/[0.08] p-3">
+                      <p className="text-[10px] uppercase tracking-[0.14em] text-[#858b9d]">Default</p>
+                      <p className="mt-1 font-semibold text-[#edf0fa]">{state.settings.default_minutes}m</p>
+                    </div>
+                    <div className="rounded-xl bg-white/[0.035] border border-white/[0.08] p-3">
+                      <p className="text-[10px] uppercase tracking-[0.14em] text-[#858b9d]">Extend by</p>
+                      <p className="mt-1 font-semibold text-[#edf0fa]">{state.settings.extension_minutes}m</p>
+                    </div>
+                    <div className="rounded-xl bg-white/[0.035] border border-white/[0.08] p-3">
+                      <p className="text-[10px] uppercase tracking-[0.14em] text-[#858b9d]">Memory</p>
+                      <p className="mt-1 font-semibold text-[#edf0fa]">{state.settings.memory_limit}</p>
+                    </div>
+                    <div className="rounded-xl bg-white/[0.035] border border-white/[0.08] p-3">
+                      <p className="text-[10px] uppercase tracking-[0.14em] text-[#858b9d]">CPU quota</p>
+                      <p className="mt-1 font-semibold text-[#edf0fa]">{state.settings.cpu_quota}</p>
+                    </div>
+                  </div>
+                  <div className="mt-5 grid grid-cols-1 gap-2">
+                    <Button variant="secondary" onClick={() => mutateSession("/terminal/session/extend")} disabled={!running || busy || (state.session?.extensions_remaining ?? 0) <= 0}>
+                      <Icon name="more_time" className="text-base" />
+                      Extend
+                    </Button>
+                    <Button variant="secondary" onClick={() => mutateSession("/terminal/session/respawn")} disabled={busy}>
+                      <Icon name="restart_alt" className="text-base" />
+                      Respawn clean
+                    </Button>
+                    <Button variant="danger" onClick={() => mutateSession("/terminal/session", "delete")} disabled={!state.session || busy}>
+                      <Icon name="stop_circle" className="text-base" />
+                      Stop terminal
+                    </Button>
                   </div>
                 </Card>
-              )}
 
-              <Card>
-                <h3 className="font-semibold text-[#edf0fa] mb-2">Works like a local shell</h3>
-                <ul className="space-y-2 text-sm text-[#8d90a0]">
-                  <li>• Use <span className="font-mono text-[#c3c6d7]">vim</span>, <span className="font-mono text-[#c3c6d7]">nano</span>, tab completion and arrow history.</li>
-                  <li>• Ctrl+C, Ctrl+D, full-screen apps and terminal resizing are forwarded.</li>
-                  <li>• Respawn wipes the container and gives you a clean workspace.</li>
-                </ul>
-              </Card>
+                {error && (
+                  <Card className="!border-[#93000a]/60 !bg-[#93000a]/10">
+                    <div className="flex gap-3 text-[#ffb4ab]">
+                      <Icon name="error" filled />
+                      <p className="text-sm">{error}</p>
+                    </div>
+                  </Card>
+                )}
+
+                <Card>
+                  <h3 className="font-semibold text-[#edf0fa] mb-3 flex items-center gap-2">
+                    <Icon name="bolt" className="text-[#b4c5ff]" />
+                    Quick commands
+                  </h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    {["whoami", "pwd", "ls -la", "ip a", "ps aux", "vim notes.txt"].map((cmd) => (
+                      <button
+                        key={cmd}
+                        type="button"
+                        onClick={() => sendQuickCommand(cmd)}
+                        disabled={!connected}
+                        className="rounded-xl border border-white/[0.08] bg-white/[0.035] px-3 py-2 text-left font-mono text-xs text-[#c3c6d7] hover:border-[#7f9eff]/35 hover:text-[#edf0fa] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                      >
+                        {cmd}
+                      </button>
+                    ))}
+                  </div>
+                </Card>
+
+                <Card>
+                  <h3 className="font-semibold text-[#edf0fa] mb-2">Works like a local shell</h3>
+                  <ul className="space-y-2 text-sm text-[#8d90a0]">
+                    <li>• Use <span className="font-mono text-[#c3c6d7]">vim</span>, <span className="font-mono text-[#c3c6d7]">nano</span>, tab completion and arrow history.</li>
+                    <li>• Ctrl+C, Ctrl+D, full-screen apps and terminal resizing are forwarded.</li>
+                    <li>• Respawn wipes the container and gives you a clean workspace.</li>
+                  </ul>
+                </Card>
+              </div>
             </div>
           </div>
         )}
