@@ -17,6 +17,7 @@ except Exception:  # pragma: no cover - lets the app boot even before dependency
 
 from sqlalchemy.orm import Session
 
+from app.core.config import settings as app_settings
 from app.models.lab import PlayerLab
 from app.models.terminal import TerminalSession, TerminalSetting
 from app.models.user import User
@@ -39,8 +40,14 @@ def as_utc(value: datetime) -> datetime:
 def get_terminal_settings(db: Session) -> TerminalSetting:
     settings = db.query(TerminalSetting).order_by(TerminalSetting.id.asc()).first()
     if not settings:
-        settings = TerminalSetting()
+        settings = TerminalSetting(image=app_settings.TERMINAL_IMAGE)
         db.add(settings)
+        db.commit()
+        db.refresh(settings)
+    elif settings.image == "ubuntu:22.04":
+        # Plain Ubuntu does not include vim/nano. Migrate old default settings
+        # to the Romulus terminal image so players always get editor tools.
+        settings.image = app_settings.TERMINAL_IMAGE
         db.commit()
         db.refresh(settings)
     return settings
@@ -110,6 +117,21 @@ def _validate_image(image: str) -> str:
     if not re.match(r"^[a-zA-Z0-9][a-zA-Z0-9._:/@-]+$", image):
         raise TerminalError("Terminal image contains unsupported characters.")
     return image
+
+
+def _validate_required_tools(container) -> None:
+    result = container.exec_run(
+        ["bash", "-lc", "command -v vim >/dev/null && command -v nano >/dev/null"],
+        stdout=True,
+        stderr=True,
+    )
+    if result.exit_code != 0:
+        output = result.output.decode("utf-8", errors="replace") if isinstance(result.output, bytes) else str(result.output)
+        raise TerminalError(
+            "Configured terminal image must include both vim and nano. "
+            "Build and select romulus-terminal-ubuntu:latest. "
+            f"Check output: {output[-300:]}"
+        )
 
 
 def _stop_container(container_id_or_name: str | None) -> None:
@@ -204,8 +226,15 @@ def spawn_session(db: Session, user: User, lab_id: int | None = None, respawn: b
                 "romulus.lab_id": str(lab_id or ""),
             },
         )
+        _validate_required_tools(container)
     except DockerException as exc:
         raise TerminalError(f"Failed to start terminal container: {exc}") from exc
+    except TerminalError:
+        try:
+            container.remove(force=True)
+        except Exception:
+            pass
+        raise
 
     session = TerminalSession(
         player_id=user.id,

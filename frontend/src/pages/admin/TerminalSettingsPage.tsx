@@ -6,7 +6,7 @@ import type { TerminalSettings } from "../../types";
 
 const fallback: TerminalSettings = {
   enabled: true,
-  image: "ubuntu:22.04",
+  image: "romulus-terminal-ubuntu:latest",
   default_minutes: 45,
   extension_minutes: 15,
   max_extensions: 2,
@@ -54,7 +54,7 @@ export function TerminalSettingsPage() {
       <div className="p-6 lg:p-8 max-w-5xl mx-auto">
         <PageHeader
           title="Terminal Settings"
-          subtitle="Configure the player Ubuntu terminal image, duration, extensions and resource limits."
+          subtitle="Configure the player terminal image, duration, extensions and resource limits. The default Romulus image includes vim and nano."
         />
 
         {loading ? <Spinner /> : (
@@ -84,8 +84,11 @@ export function TerminalSettingsPage() {
                   name="image"
                   value={form.image}
                   onChange={(event) => setField("image", event.target.value)}
-                  placeholder="ubuntu:22.04 or your-registry/romulus-ubuntu:latest"
+                  placeholder="romulus-terminal-ubuntu:latest"
                 />
+                <p className="text-xs text-[#8d90a0] -mt-3">
+                  Use <span className="font-mono text-[#c3c6d7]">romulus-terminal-ubuntu:latest</span> to guarantee <span className="font-mono text-[#c3c6d7]">vim</span> and <span className="font-mono text-[#c3c6d7]">nano</span> are available.
+                </p>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <Input label="Session minutes" name="default_minutes" type="number" value={String(form.default_minutes)} onChange={(e) => setField("default_minutes", Number(e.target.value))} />

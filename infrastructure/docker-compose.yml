@@ -39,6 +39,14 @@ services:
     volumes:
       - mitre_data:/app/data/mitre
 
+  terminal-image:
+    build:
+      context: ./infrastructure/terminal
+      dockerfile: Dockerfile
+    image: ${TERMINAL_IMAGE:-romulus-terminal-ubuntu:latest}
+    restart: "no"
+    command: ["true"]
+
   backend:
     build:
       context: ./backend
@@ -68,6 +76,7 @@ services:
       PROMETHEUS_PUBLIC_URL: ${PROMETHEUS_PUBLIC_URL:-https://localhost:48173/prometheus}
       GRAFANA_TRAINING_USERNAME: ${GRAFANA_ADMIN_USER:-admin}
       GRAFANA_TRAINING_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-ChangeMe-Grafana-2026!}
+      TERMINAL_IMAGE: ${TERMINAL_IMAGE:-romulus-terminal-ubuntu:latest}
       MITRE_ATTACK_VERSION: "19.1"
       MITRE_CATALOG_PATH: /app/data/mitre/catalog.json
     depends_on:
@@ -76,6 +85,8 @@ services:
       redis:
         condition: service_healthy
       mitre-sync:
+        condition: service_completed_successfully
+      terminal-image:
         condition: service_completed_successfully
     volumes:
       - mitre_data:/app/data/mitre:ro

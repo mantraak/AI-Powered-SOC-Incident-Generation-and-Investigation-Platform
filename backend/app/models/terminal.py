@@ -7,7 +7,7 @@ class TerminalSetting(TimestampMixin, Base):
     __tablename__ = "terminal_settings"
 
     enabled = Column(Boolean, default=True, nullable=False)
-    image = Column(String, default="ubuntu:22.04", nullable=False)
+    image = Column(String, default="romulus-terminal-ubuntu:latest", nullable=False)
     default_minutes = Column(Integer, default=45, nullable=False)
     extension_minutes = Column(Integer, default=15, nullable=False)
     max_extensions = Column(Integer, default=2, nullable=False)

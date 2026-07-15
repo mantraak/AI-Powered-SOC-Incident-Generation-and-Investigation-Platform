@@ -56,6 +56,8 @@ class Settings(BaseSettings):
     GRAFANA_TRAINING_USERNAME: str = "admin"
     GRAFANA_TRAINING_PASSWORD: str = "ChangeMe-Grafana-2026!"
 
+    TERMINAL_IMAGE: str = "romulus-terminal-ubuntu:latest"
+
     MITRE_ATTACK_VERSION: str = "19.1"
     MITRE_STIX_URL: str = (
         "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/"
