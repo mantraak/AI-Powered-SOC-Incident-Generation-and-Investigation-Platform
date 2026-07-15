@@ -23,6 +23,7 @@ import { LabInvestigationPage } from "./pages/player/LabInvestigationPage";
 import { TeamLabsPage } from "./pages/player/TeamLabsPage";
 import { TeamLabDashboardPage } from "./pages/player/TeamLabDashboardPage";
 import { PlayerAIAssistantPage } from "./pages/player/AIAssistantPage";
+import { PlayerArchivePage } from "./pages/player/PlayerArchivePage";
 
 // Shared pages
 import { ThreatFeedPage } from "./pages/shared/ThreatFeedPage";
@@ -70,6 +71,8 @@ export default function App() {
           <Route path="/player/dashboard" element={<ProtectedRoute><PlayerDashboard /></ProtectedRoute>} />
           <Route path="/player/labs" element={<ProtectedRoute><PlayerLabsPage /></ProtectedRoute>} />
           <Route path="/player/labs/:id" element={<ProtectedRoute><LabInvestigationPage /></ProtectedRoute>} />
+          <Route path="/player/archive" element={<ProtectedRoute><PlayerArchivePage /></ProtectedRoute>} />
+          <Route path="/player/archive/:id" element={<ProtectedRoute><PlayerArchivePage /></ProtectedRoute>} />
           <Route path="/player/team-labs" element={<ProtectedRoute><TeamLabsPage /></ProtectedRoute>} />
           <Route path="/player/team-labs/:id" element={<ProtectedRoute><TeamLabDashboardPage /></ProtectedRoute>} />
           <Route path="/player/assistant" element={<ProtectedRoute><PlayerAIAssistantPage /></ProtectedRoute>} />

@@ -19,6 +19,7 @@ const adminNav = [
 const playerNav = [
   { path: "/player/dashboard",   label: "Dashboard",   icon: "dashboard" },
   { path: "/player/labs",        label: "My Labs",     icon: "biotech"   },
+  { path: "/player/archive",     label: "Archive",     icon: "archive"   },
   { path: "/player/team-labs",   label: "Team Labs",   icon: "groups"    },
   { path: "/player/assistant",   label: "AI Mentor",   icon: "school"    },
   { path: "/player/threat-feed", label: "Threat Feed", icon: "newspaper" },

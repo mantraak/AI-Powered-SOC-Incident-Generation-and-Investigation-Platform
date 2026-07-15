@@ -112,6 +112,76 @@ export interface Score {
   created_at: string;
 }
 
+export interface LabArchiveSummary {
+  lab_id: number;
+  scenario_id: number;
+  title: string;
+  difficulty: "beginner" | "intermediate" | "advanced" | string;
+  status: "submitted" | "evaluated" | string;
+  started_at?: string;
+  submitted_at?: string;
+  created_at: string;
+  score?: Partial<Score> | null;
+  percent: number;
+  answered_questions: number;
+  correct_answers: number;
+  total_questions: number;
+  mitre_techniques: string[];
+  summary?: string;
+}
+
+export interface LabArchiveDetail {
+  summary: LabArchiveSummary;
+  scenario: Scenario;
+  score?: Partial<Score> | null;
+  investigation_path: Array<{
+    step: number;
+    title: string;
+    description: string;
+    player_action?: string;
+    outcome: "correct" | "needs_review" | string;
+    feedback?: string;
+    evidence?: string;
+    points_awarded: number;
+    time?: string;
+  }>;
+  question_review: Array<{
+    question_id: number;
+    order: number;
+    question_text: string;
+    question_type: string;
+    points: number;
+    hint?: string;
+    player_answer?: string;
+    is_correct?: boolean | null;
+    points_awarded: number;
+    feedback?: string;
+    attached_evidence?: string;
+    answered_at?: string;
+  }>;
+  key_findings: Array<{
+    type: string;
+    title: string;
+    detail?: string;
+    mitre_id?: string;
+    severity?: string;
+  }>;
+  evidence: {
+    events: any[];
+    traffic: any[];
+    traces: any[];
+    artifacts: any[];
+    alerts: any[];
+    indicators: any[];
+    containment_actions: any[];
+  };
+  diary: {
+    opening: string;
+    method: string;
+    review_tip: string;
+  };
+}
+
 export interface SocTool {
   id: string;
   name: string;
