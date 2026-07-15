@@ -45,7 +45,7 @@ services:
       dockerfile: Dockerfile
     image: ${TERMINAL_IMAGE:-romulus-terminal-ubuntu:latest}
     restart: "no"
-    command: ["true"]
+    command: ["bash", "-lc", "command -v vim >/dev/null && command -v nano >/dev/null"]
 
   backend:
     build:

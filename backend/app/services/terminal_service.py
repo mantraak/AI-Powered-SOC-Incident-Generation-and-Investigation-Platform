@@ -184,10 +184,31 @@ def spawn_session(db: Session, user: User, lab_id: int | None = None, respawn: b
     if not settings.enabled:
         raise TerminalError("Player terminal is currently disabled by the administrator.")
     _ensure_lab_access(db, user, lab_id)
+    image = _validate_image(settings.image)
 
     existing = expire_if_needed(db, get_active_session(db, user, lab_id))
+    if existing and existing.status == "running" and existing.image != image:
+        try:
+            _stop_container(existing.container_id or existing.container_name)
+        except TerminalError as exc:
+            existing.last_error = str(exc)
+        existing.status = "stopped"
+        db.commit()
+        existing = None
     if existing and existing.status == "running" and not respawn:
-        return existing
+        try:
+            client = _docker_client()
+            container = client.containers.get(existing.container_id or existing.container_name)
+            _validate_required_tools(container)
+            return existing
+        except Exception as exc:
+            existing.last_error = f"Existing terminal image is missing required tools: {exc}"
+            existing.status = "stopped"
+            db.commit()
+            try:
+                _stop_container(existing.container_id or existing.container_name)
+            except TerminalError:
+                pass
     if existing and respawn:
         try:
             _stop_container(existing.container_id or existing.container_name)
@@ -197,7 +218,6 @@ def spawn_session(db: Session, user: User, lab_id: int | None = None, respawn: b
         db.commit()
 
     client = _docker_client()
-    image = _validate_image(settings.image)
     name = _safe_name(user.id, lab_id)
     try:
         _stop_container(name)
