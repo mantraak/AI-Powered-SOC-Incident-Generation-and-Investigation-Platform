@@ -79,6 +79,7 @@ services:
         condition: service_completed_successfully
     volumes:
       - mitre_data:/app/data/mitre:ro
+      - /var/run/docker.sock:/var/run/docker.sock
     working_dir: /app
     networks:
       - default

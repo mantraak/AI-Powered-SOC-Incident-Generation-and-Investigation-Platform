@@ -13,7 +13,71 @@ from app.services.ai_provider import decrypt_api_key, encrypt_api_key
 # served from a short-lived in-process cache instead of hitting the API every load.
 _cache: dict[tuple, tuple[float, dict]] = {}
 
-MAX_QUERY_CHARS = 100
+MAX_QUERY_CHARS = 180
+
+CYBER_DEFAULT_QUERY = (
+    "cybersecurity OR cyber attack OR ransomware OR data breach OR malware OR "
+    "zero-day OR vulnerability OR phishing OR threat actor"
+)
+
+CYBER_RELEVANCE_TERMS = {
+    "apt",
+    "breach",
+    "cisa",
+    "credential",
+    "cve",
+    "cyber",
+    "cyberattack",
+    "cybersecurity",
+    "data breach",
+    "ddos",
+    "exploit",
+    "exploited",
+    "firewall",
+    "hacker",
+    "hacking",
+    "infosec",
+    "intrusion",
+    "ioc",
+    "malware",
+    "microsoft patch",
+    "phishing",
+    "ransomware",
+    "security flaw",
+    "security incident",
+    "security update",
+    "spyware",
+    "threat actor",
+    "trojan",
+    "vulnerability",
+    "zero-day",
+    "zeroday",
+}
+
+CYBER_CONTEXT_TERMS = {
+    "attack",
+    "campaign",
+    "compromise",
+    "critical",
+    "incident",
+    "patch",
+    "privacy",
+    "risk",
+    "security",
+    "stolen",
+    "threat",
+}
+
+NON_CYBER_FALSE_POSITIVE_TERMS = {
+    "football",
+    "basketball",
+    "cricket",
+    "movie",
+    "celebrity",
+    "recipe",
+    "stock market",
+    "fashion",
+}
 
 
 class NewsError(RuntimeError):
@@ -76,6 +140,44 @@ def _normalize_article(row: dict) -> dict | None:
     }
 
 
+def _build_cyber_query(query: str | None) -> str:
+    """Keep custom searches inside the cybersecurity lane."""
+    raw = (query or "").strip()
+    if not raw:
+        return (settings.NEWS_DEFAULT_QUERY.strip() or CYBER_DEFAULT_QUERY)[:MAX_QUERY_CHARS]
+
+    lowered = raw.lower()
+    if any(term in lowered for term in CYBER_RELEVANCE_TERMS):
+        return raw[:MAX_QUERY_CHARS]
+
+    # A player/admin search like "Microsoft" or "hospital" should mean
+    # cybersecurity news about that entity, not general Microsoft or hospital news.
+    scoped = f"({raw}) AND (cybersecurity OR cyber attack OR data breach OR ransomware OR malware OR vulnerability)"
+    return scoped[:MAX_QUERY_CHARS]
+
+
+def _is_cyber_relevant(article: dict) -> bool:
+    text = " ".join([
+        article.get("title") or "",
+        article.get("description") or "",
+        article.get("source") or "",
+        " ".join(article.get("categories") or []),
+    ]).lower()
+
+    if not text.strip():
+        return False
+    if any(term in text for term in NON_CYBER_FALSE_POSITIVE_TERMS) and not any(
+        term in text for term in CYBER_RELEVANCE_TERMS
+    ):
+        return False
+    if any(term in text for term in CYBER_RELEVANCE_TERMS):
+        return True
+
+    # Allow "security incident", "security patch", "critical vulnerability-like"
+    # stories even when the word "cyber" is absent.
+    return "security" in text and any(term in text for term in CYBER_CONTEXT_TERMS)
+
+
 def _raise_for_newsdata_error(response: httpx.Response) -> None:
     if response.status_code == 200:
         return
@@ -100,7 +202,7 @@ async def fetch_latest_news(
     page: str | None = None,
 ) -> dict:
     """Fetch cybersecurity headlines. Cached briefly per query to conserve API credits."""
-    search = (query or settings.NEWS_DEFAULT_QUERY).strip()[:MAX_QUERY_CHARS]
+    search = _build_cyber_query(query)
     cache_key = (search, page or "")
 
     cached = _cache.get(cache_key)
@@ -135,17 +237,18 @@ async def fetch_latest_news(
         raise NewsError(str(message or "newsdata.io returned an error"))
 
     rows = payload.get("results")
-    articles = [
+    raw_articles = [
         article
         for article in (_normalize_article(row) for row in rows if isinstance(row, dict))
         if article
     ] if isinstance(rows, list) else []
+    articles = [article for article in raw_articles if _is_cyber_relevant(article)]
 
     result = {
         "query": search,
         "articles": articles,
         "next_page": payload.get("nextPage") or None,
-        "total_results": int(payload.get("totalResults") or len(articles)),
+        "total_results": len(articles),
         "cached": False,
     }
     _cache[cache_key] = (time.time(), result)

@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from app.api.v1.endpoints import (
     auth, users, scenarios, labs, investigation, tools, mitre, moderator, ai_settings,
-    lab_groups, assistant, news,
+    lab_groups, assistant, news, terminal,
 )
 
 api_router = APIRouter()
@@ -18,3 +18,4 @@ api_router.include_router(ai_settings.router, prefix="/ai-settings", tags=["ai-s
 api_router.include_router(lab_groups.router, prefix="/lab-groups", tags=["lab-groups"])
 api_router.include_router(assistant.router, prefix="/assistant", tags=["assistant"])
 api_router.include_router(news.router, prefix="/news", tags=["news"])
+api_router.include_router(terminal.router, prefix="/terminal", tags=["terminal"])

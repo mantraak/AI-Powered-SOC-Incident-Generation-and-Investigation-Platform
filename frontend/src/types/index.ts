@@ -430,6 +430,47 @@ export interface AdminChatResponse {
   search_error?: string;
 }
 
+export interface TerminalSettings {
+  enabled: boolean;
+  image: string;
+  default_minutes: number;
+  extension_minutes: number;
+  max_extensions: number;
+  command_timeout_seconds: number;
+  network_enabled: boolean;
+  memory_limit: string;
+  cpu_quota: number;
+  updated_at?: string;
+}
+
+export interface TerminalSession {
+  id: number;
+  lab_id?: number;
+  image: string;
+  status: "running" | "expired" | "stopped" | "created" | "error" | string;
+  container_name?: string;
+  expires_at: string;
+  remaining_seconds: number;
+  extensions_used: number;
+  extensions_remaining: number;
+  last_command?: string;
+  last_error?: string;
+  created_at?: string;
+}
+
+export interface TerminalState {
+  available: boolean;
+  session?: TerminalSession | null;
+  settings: TerminalSettings;
+}
+
+export interface TerminalExecResult {
+  command: string;
+  exit_code: number;
+  output: string;
+  session?: TerminalSession;
+}
+
 export interface AssistantScenarioHit {
   id: number;
   title: string;
