@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { AppLayout, PageHeader } from "../../components/layout/AppLayout";
-import { Button, Card, StatusBadge, Spinner, EmptyState, Icon } from "../../components/ui";
+import { Card, StatusBadge, Spinner, EmptyState, Icon } from "../../components/ui";
 import { useAuth } from "../../store/authContext";
 import api from "../../api/client";
 import type { Lab } from "../../types";
@@ -32,14 +32,6 @@ export function PlayerDashboard() {
         <PageHeader
           title={`Welcome, ${user?.full_name?.split(" ")[0] ?? "Analyst"}`}
           subtitle="Your SOC investigation workspace"
-          action={
-            <Link to="/player/archive">
-              <Button variant="secondary" size="sm">
-                <Icon name="archive" className="text-base" />
-                Open Archive
-              </Button>
-            </Link>
-          }
         />
 
         {loading ? (

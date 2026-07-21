@@ -14,7 +14,6 @@ from app.models.ai_setting import AISetting
 from app.models.traffic import ScenarioTraffic
 from app.models.trace import ScenarioTrace
 from app.models.lab_workspace import LabWorkspace
-from app.models.terminal import TerminalSetting, TerminalSession
 from app.models.collaboration import (
     LabGroup,
     LabGroupMember,

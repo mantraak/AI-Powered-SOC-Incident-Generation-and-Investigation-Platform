@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import api from "../../api/client";
 import { AppLayout, PageHeader } from "../../components/layout/AppLayout";
 import { ChatComposer, ChatThread, SuggestionChip, WebSearchToggle } from "../../components/assistant/ChatThread";
 import { Badge, Button, Card, Icon } from "../../components/ui";
 import type { AdminChatResponse, AssistantScenarioHit, ChatMessage } from "../../types";
+import type { DraftConflict } from "../../types";
+import { createDraftLab } from "../../utils/draftLab";
 
 const SUGGESTIONS = [
   "What are the most significant cybersecurity incidents reported this week?",
@@ -26,10 +28,13 @@ const inputCls =
 
 export function AdminAIAssistantPage() {
   const [params] = useSearchParams();
+  const navigate = useNavigate();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [creatingDraftLab, setCreatingDraftLab] = useState(false);
+  const [draftConflict, setDraftConflict] = useState<DraftConflict | null>(null);
 
   const [search, setSearch] = useState("");
   const [hits, setHits] = useState<AssistantScenarioHit[]>([]);
@@ -99,6 +104,41 @@ export function AdminAIAssistantPage() {
       setError(err.response?.data?.detail || "The AI assistant could not answer. Check Admin › AI Settings.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const createLabFromResearch = async (forceNewVersion = false) => {
+    const referenceLinks = links.split(/\r?\n/).map((value) => value.trim()).filter(Boolean);
+    const lastReply = [...messages].reverse().find((m) => m.role === "assistant");
+    const lastUserAsk = [...messages].reverse().find((m) => m.role === "user");
+    if (!referenceLinks.length && !lastReply) {
+      setError("Add a reference link or ask the assistant a question first, so there's source material for the Draft Lab.");
+      return;
+    }
+    setCreatingDraftLab(true);
+    setError("");
+    try {
+      const result = await createDraftLab(
+        {
+          title: scenario ? `${scenario.title} (AI research)` : (lastUserAsk?.content.slice(0, 120) || "Draft lab from AI research"),
+          source_url: referenceLinks[0],
+          source_title: referenceLinks[0],
+          source_article: lastReply?.content,
+          ai_prompt: lastUserAsk?.content,
+        },
+        { forceNewVersion }
+      );
+      if (result.conflict) {
+        setDraftConflict(result.conflict);
+        return;
+      }
+      if (result.scenario) {
+        navigate(`/admin/scenarios/${result.scenario.id}`);
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.detail || "Could not create a Draft Lab from this research session.");
+    } finally {
+      setCreatingDraftLab(false);
     }
   };
 
@@ -301,10 +341,55 @@ export function AdminAIAssistantPage() {
                 The assistant reads these pages before answering. Use them for incidents newer than the model's
                 training data — up to four links.
               </p>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="w-full justify-center mt-3"
+                onClick={() => createLabFromResearch()}
+                disabled={creatingDraftLab}
+                data-testid="create-draft-lab-btn"
+              >
+                {creatingDraftLab ? (
+                  <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <Icon name="add_box" className="text-sm" />
+                )}
+                Create Draft Lab
+              </Button>
             </Card>
           </div>
         </div>
       </div>
+
+      {draftConflict && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <Card className="max-w-md w-full">
+            <div className="flex items-start gap-3 mb-4">
+              <span className="w-10 h-10 rounded-xl bg-amber-500/15 flex items-center justify-center flex-shrink-0">
+                <Icon name="content_copy" className="text-amber-300" />
+              </span>
+              <div>
+                <h3 className="text-sm font-semibold text-[#edf0fa]">Draft Lab already exists</h3>
+                <p className="text-xs text-[#9299aa] mt-1.5 leading-relaxed">
+                  "{draftConflict.existing_title}" was already created from this source
+                  (status: {draftConflict.existing_status}).
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button onClick={() => { navigate(`/admin/scenarios/${draftConflict.existing_scenario_id}`); setDraftConflict(null); }}>
+                <Icon name="folder_open" className="text-base" />
+                Open Existing Draft
+              </Button>
+              <Button variant="secondary" onClick={async () => { setDraftConflict(null); await createLabFromResearch(true); }}>
+                <Icon name="difference" className="text-base" />
+                Create New Version
+              </Button>
+              <Button variant="ghost" onClick={() => setDraftConflict(null)}>Cancel</Button>
+            </div>
+          </Card>
+        </div>
+      )}
     </AppLayout>
   );
 }

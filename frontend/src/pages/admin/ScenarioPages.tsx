@@ -107,6 +107,12 @@ export function AdminScenariosPage() {
                       </Link>
                       <StatusBadge status={s.status} />
                       <DifficultyBadge difficulty={s.difficulty} />
+                      {s.created_from_ai && (
+                        <Badge color="purple">
+                          <Icon name="auto_awesome" className="text-[13px]" />
+                          AI draft
+                        </Badge>
+                      )}
                     </div>
                     {s.description && <p className="text-sm text-[#9299aa] line-clamp-2 mb-4 leading-5 min-h-10">{s.description}</p>}
                     <div className="flex gap-4 text-xs text-[#8d90a0] flex-wrap">
@@ -298,6 +304,13 @@ export function ScenarioDetailPage() {
   const [generating, setGenerating] = useState(false);
   const [tab, setTab] = useState<"overview" | "timeline" | "attack" | "assets" | "evidence">("overview");
   const [evidence, setEvidence] = useState<{ events: any[]; traffic: any[]; traces: any[]; artifacts: any[] }>({ events: [], traffic: [], traces: [], artifacts: [] });
+  const [editMode, setEditMode] = useState(false);
+  const [editForm, setEditForm] = useState({
+    title: "", description: "", summary: "", iocs: "", difficulty: "intermediate", num_questions: "10",
+  });
+  const [editMitre, setEditMitre] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   const load = async () => {
     const res = await api.get(`/scenarios/${id}`);
@@ -341,6 +354,43 @@ export function ScenarioDetailPage() {
     await load();
   };
 
+  const enterEditMode = () => {
+    if (!scenario) return;
+    setEditForm({
+      title: scenario.title || "",
+      description: scenario.description || "",
+      summary: scenario.summary || "",
+      iocs: (scenario.iocs || []).join(", "),
+      difficulty: scenario.difficulty || "intermediate",
+      num_questions: String(scenario.num_questions || 10),
+    });
+    setEditMitre(scenario.mitre_techniques || []);
+    setSaveError("");
+    setEditMode(true);
+  };
+
+  const handleSaveEdit = async () => {
+    setSaving(true);
+    setSaveError("");
+    try {
+      await api.put(`/scenarios/${id}`, {
+        title: editForm.title,
+        description: editForm.description,
+        summary: editForm.summary,
+        iocs: editForm.iocs.split(",").map((s) => s.trim()).filter(Boolean),
+        difficulty: editForm.difficulty,
+        num_questions: parseInt(editForm.num_questions) || 10,
+        mitre_techniques: editMitre,
+      });
+      await load();
+      setEditMode(false);
+    } catch (err: any) {
+      setSaveError(err.response?.data?.detail || "Could not save changes.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) return <AppLayout><Spinner /></AppLayout>;
   if (!scenario) return <AppLayout><div className="p-6 text-[#8d90a0]">Scenario not found</div></AppLayout>;
 
@@ -366,12 +416,24 @@ export function ScenarioDetailPage() {
             </button>
             <p className="text-[10px] uppercase tracking-[0.2em] text-[#6f91ef] font-semibold mb-1">Scenario #{scenario.id}</p>
             <h1 className="text-2xl font-bold text-[#edf0fa] tracking-[-0.025em]">{scenario.title}</h1>
-            <div className="flex gap-2 mt-2 items-center">
+            <div className="flex gap-2 mt-2 items-center flex-wrap">
               <StatusBadge status={scenario.status} />
               <DifficultyBadge difficulty={scenario.difficulty} />
+              {scenario.created_from_ai && (
+                <Badge color="purple">
+                  <Icon name="auto_awesome" className="text-[13px]" />
+                  From article{scenario.draft_version && scenario.draft_version > 1 ? ` · v${scenario.draft_version}` : ""}
+                </Badge>
+              )}
             </div>
           </div>
           <div className="flex gap-2">
+            {!editMode && scenario.status !== "published" && (
+              <Button variant="secondary" onClick={enterEditMode} data-testid="edit-scenario-btn">
+                <Icon name="edit" className="text-base" />
+                Edit
+              </Button>
+            )}
             {(scenario.status === "draft" || scenario.status === "validation_failed") && (
               <Button onClick={handleGenerate} disabled={generating} data-testid="generate-scenario-btn">
                 <Icon name="auto_awesome" className="text-base" />
@@ -422,38 +484,121 @@ export function ScenarioDetailPage() {
         </div>
 
         {tab === "overview" && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            <Card>
-              <div className="flex items-center gap-2 mb-3 pb-2 border-b border-[#434655]">
-                <Icon name="description" className="text-[#b4c5ff]" />
-                <h3 className="text-sm font-semibold text-[#e1e2ed]">Summary</h3>
+          <div className="space-y-5">
+            {scenario.created_from_ai && (
+              <Card className="!bg-[linear-gradient(135deg,rgba(168,85,247,.08),rgba(19,22,31,.96))]">
+                <div className="flex items-center gap-2 mb-3 pb-2 border-b border-[#434655]">
+                  <Icon name="link" className="text-purple-300" />
+                  <h3 className="text-sm font-semibold text-[#e1e2ed]">Source article</h3>
+                </div>
+                <div className="space-y-2 text-sm">
+                  <p className="text-[#e1e2ed]">{scenario.source_title || scenario.source_url || "Untitled source"}</p>
+                  {scenario.source_url && (
+                    <a href={scenario.source_url} target="_blank" rel="noreferrer" className="text-xs text-[#9fb9ff] hover:text-[#c8d5ff] inline-flex items-center gap-1 break-all">
+                      <Icon name="open_in_new" className="text-xs" />
+                      {scenario.source_url}
+                    </a>
+                  )}
+                  {scenario.source_article && (
+                    <p className="text-xs text-[#9299aa] leading-relaxed line-clamp-4 mt-2">{scenario.source_article}</p>
+                  )}
+                </div>
+              </Card>
+            )}
+
+            {editMode ? (
+              <Card>
+                <div className="flex items-center justify-between gap-3 mb-4 pb-2 border-b border-[#434655]">
+                  <div className="flex items-center gap-2">
+                    <Icon name="edit_note" className="text-[#b4c5ff]" />
+                    <h3 className="text-sm font-semibold text-[#e1e2ed]">Edit Draft Lab</h3>
+                  </div>
+                </div>
+                {saveError && (
+                  <div className="mb-4 p-3 bg-[#93000a]/25 border border-[#93000a]/60 rounded-lg text-[#ffb4ab] text-sm flex items-start gap-2">
+                    <Icon name="error" filled className="text-base flex-shrink-0 mt-0.5" />
+                    {saveError}
+                  </div>
+                )}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-[11px] text-[#8d90a0] font-semibold mb-1.5 uppercase tracking-wider">Title</label>
+                    <input value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} className={inputCls} data-testid="edit-title-input" />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-[#8d90a0] font-semibold mb-1.5 uppercase tracking-wider">Description</label>
+                    <textarea value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} rows={3} className={inputCls} />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-[#8d90a0] font-semibold mb-1.5 uppercase tracking-wider">Executive summary</label>
+                    <textarea value={editForm.summary} onChange={(e) => setEditForm({ ...editForm, summary: e.target.value })} rows={3} className={inputCls} placeholder="Shown to analysts as the incident brief." />
+                  </div>
+                  <MitreTechniqueSelector value={editMitre} onChange={setEditMitre} />
+                  <div>
+                    <label className="block text-[11px] text-[#8d90a0] font-semibold mb-1.5 uppercase tracking-wider">Indicators of Compromise (comma-separated)</label>
+                    <input value={editForm.iocs} onChange={(e) => setEditForm({ ...editForm, iocs: e.target.value })} className={`${inputCls} font-mono text-xs`} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[11px] text-[#8d90a0] font-semibold mb-1.5 uppercase tracking-wider">Difficulty</label>
+                      <select value={editForm.difficulty} onChange={(e) => setEditForm({ ...editForm, difficulty: e.target.value })} className={inputCls}>
+                        <option value="beginner">Beginner</option>
+                        <option value="intermediate">Intermediate</option>
+                        <option value="advanced">Advanced</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-[#8d90a0] font-semibold mb-1.5 uppercase tracking-wider">Number of Questions</label>
+                      <input type="number" min="3" max="20" value={editForm.num_questions} onChange={(e) => setEditForm({ ...editForm, num_questions: e.target.value })} className={inputCls} />
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-[#7f8799] leading-relaxed">
+                    Generated evidence (timeline, attack steps, logs, questions) is edited by regenerating with the
+                    updated brief above, or via the API for field-level changes.
+                  </p>
+                  <div className="flex gap-3 pt-2">
+                    <Button onClick={handleSaveEdit} disabled={saving} data-testid="save-scenario-btn">
+                      {saving ? "Saving…" : (<><Icon name="save" className="text-base" /> Save changes</>)}
+                    </Button>
+                    <Button variant="secondary" onClick={() => setEditMode(false)}>Cancel</Button>
+                  </div>
+                </div>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <Card>
+                  <div className="flex items-center gap-2 mb-3 pb-2 border-b border-[#434655]">
+                    <Icon name="description" className="text-[#b4c5ff]" />
+                    <h3 className="text-sm font-semibold text-[#e1e2ed]">Summary</h3>
+                  </div>
+                  <p className="text-sm text-[#c3c6d7] leading-relaxed">{scenario.summary || scenario.description || "Not generated yet."}</p>
+                  <div className="mt-4 space-y-2 text-sm">
+                    <div className="flex justify-between"><span className="text-[#8d90a0]">Questions</span><span className="text-[#e1e2ed] font-mono">{scenario.num_questions}</span></div>
+                    <div className="flex justify-between"><span className="text-[#8d90a0]">Created</span><span className="text-[#e1e2ed] font-mono">{new Date(scenario.created_at).toLocaleDateString()}</span></div>
+                  </div>
+                </Card>
+                <Card>
+                  <div className="flex items-center gap-2 mb-3 pb-2 border-b border-[#434655]">
+                    <Icon name="target" className="text-[#b4c5ff]" />
+                    <h3 className="text-sm font-semibold text-[#e1e2ed]">MITRE Techniques</h3>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {scenario.mitre_techniques?.length ? scenario.mitre_techniques.map((t) => (
+                      <Badge key={t} color="purple">{t}</Badge>
+                    )) : <span className="text-sm text-[#8d90a0]">None specified</span>}
+                  </div>
+                  <div className="flex items-center gap-2 mt-5 mb-3 pb-2 border-b border-[#434655]">
+                    <Icon name="fingerprint" className="text-[#ffb4ab]" />
+                    <h3 className="text-sm font-semibold text-[#e1e2ed]">Indicators of Compromise</h3>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {scenario.iocs?.length ? scenario.iocs.map((ioc) => (
+                      <span key={ioc} className="px-2 py-1 bg-[#93000a]/20 border border-[#93000a]/50 rounded-md text-xs text-[#ffb4ab] font-mono">{ioc}</span>
+                    )) : <span className="text-sm text-[#8d90a0]">None specified</span>}
+                  </div>
+                </Card>
               </div>
-              <p className="text-sm text-[#c3c6d7] leading-relaxed">{scenario.summary || scenario.description || "Not generated yet."}</p>
-              <div className="mt-4 space-y-2 text-sm">
-                <div className="flex justify-between"><span className="text-[#8d90a0]">Questions</span><span className="text-[#e1e2ed] font-mono">{scenario.num_questions}</span></div>
-                <div className="flex justify-between"><span className="text-[#8d90a0]">Created</span><span className="text-[#e1e2ed] font-mono">{new Date(scenario.created_at).toLocaleDateString()}</span></div>
-              </div>
-            </Card>
-            <Card>
-              <div className="flex items-center gap-2 mb-3 pb-2 border-b border-[#434655]">
-                <Icon name="target" className="text-[#b4c5ff]" />
-                <h3 className="text-sm font-semibold text-[#e1e2ed]">MITRE Techniques</h3>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {scenario.mitre_techniques?.length ? scenario.mitre_techniques.map((t) => (
-                  <Badge key={t} color="purple">{t}</Badge>
-                )) : <span className="text-sm text-[#8d90a0]">None specified</span>}
-              </div>
-              <div className="flex items-center gap-2 mt-5 mb-3 pb-2 border-b border-[#434655]">
-                <Icon name="fingerprint" className="text-[#ffb4ab]" />
-                <h3 className="text-sm font-semibold text-[#e1e2ed]">Indicators of Compromise</h3>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {scenario.iocs?.length ? scenario.iocs.map((ioc) => (
-                  <span key={ioc} className="px-2 py-1 bg-[#93000a]/20 border border-[#93000a]/50 rounded-md text-xs text-[#ffb4ab] font-mono">{ioc}</span>
-                )) : <span className="text-sm text-[#8d90a0]">None specified</span>}
-              </div>
-            </Card>
+            )}
           </div>
         )}
 

@@ -27,7 +27,7 @@ services:
 
   mitre-sync:
     build:
-      context: ./backend
+      context: ../backend
       dockerfile: Dockerfile
     restart: "no"
     command: ["python", "-m", "app.services.mitre_sync"]
@@ -39,17 +39,9 @@ services:
     volumes:
       - mitre_data:/app/data/mitre
 
-  terminal-image:
-    build:
-      context: ./infrastructure/terminal
-      dockerfile: Dockerfile
-    image: ${TERMINAL_IMAGE:-romulus-terminal-ubuntu:latest}
-    restart: "no"
-    command: ["bash", "-lc", "command -v vim >/dev/null && command -v nano >/dev/null"]
-
   backend:
     build:
-      context: ./backend
+      context: ../backend
       dockerfile: Dockerfile
     command: ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
     restart: unless-stopped
@@ -76,7 +68,6 @@ services:
       PROMETHEUS_PUBLIC_URL: ${PROMETHEUS_PUBLIC_URL:-https://localhost:48173/prometheus}
       GRAFANA_TRAINING_USERNAME: ${GRAFANA_ADMIN_USER:-admin}
       GRAFANA_TRAINING_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-ChangeMe-Grafana-2026!}
-      TERMINAL_IMAGE: ${TERMINAL_IMAGE:-romulus-terminal-ubuntu:latest}
       MITRE_ATTACK_VERSION: "19.1"
       MITRE_CATALOG_PATH: /app/data/mitre/catalog.json
     depends_on:
@@ -86,11 +77,8 @@ services:
         condition: service_healthy
       mitre-sync:
         condition: service_completed_successfully
-      terminal-image:
-        condition: service_completed_successfully
     volumes:
       - mitre_data:/app/data/mitre:ro
-      - /var/run/docker.sock:/var/run/docker.sock
     working_dir: /app
     networks:
       - default
@@ -104,7 +92,7 @@ services:
 
   frontend:
     build:
-      context: ./frontend
+      context: ../frontend
       dockerfile: Dockerfile
     restart: unless-stopped
     healthcheck:
@@ -142,7 +130,7 @@ services:
             -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
         fi
     volumes:
-      - ./infrastructure/wazuh/certs:/wazuh-certs:ro
+      - ./wazuh/certs:/wazuh-certs:ro
       - gateway_certs:/certs
 
   nginx:
@@ -151,7 +139,7 @@ services:
     ports:
       - "${ROMULUS_PORT:-48173}:443"
     volumes:
-      - ./infrastructure/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - gateway_certs:/etc/nginx/certs:ro
     depends_on:
       gateway-cert-init:

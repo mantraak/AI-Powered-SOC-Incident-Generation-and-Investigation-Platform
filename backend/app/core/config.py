@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     # Threat news feed. Administrators can override the key in the UI.
     NEWSDATA_API_KEY: Optional[str] = None
     NEWSDATA_API_URL: str = "https://newsdata.io/api/1/latest"
-    NEWS_DEFAULT_QUERY: str = "cybersecurity OR ransomware OR data breach OR malware OR phishing OR vulnerability"
+    NEWS_DEFAULT_QUERY: str = "cybersecurity OR ransomware OR data breach OR malware"
     NEWS_LANGUAGE: str = "en"
     NEWS_CACHE_TTL_SECONDS: int = 900
     MODERATOR_MAX_SOURCE_CHARS: int = 12000
@@ -55,8 +55,6 @@ class Settings(BaseSettings):
     THEHIVE_TRAINING_PASSWORD: str = "secret"
     GRAFANA_TRAINING_USERNAME: str = "admin"
     GRAFANA_TRAINING_PASSWORD: str = "ChangeMe-Grafana-2026!"
-
-    TERMINAL_IMAGE: str = "romulus-terminal-ubuntu:latest"
 
     MITRE_ATTACK_VERSION: str = "19.1"
     MITRE_STIX_URL: str = (

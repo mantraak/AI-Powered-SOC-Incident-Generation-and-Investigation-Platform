@@ -17,4 +17,3 @@ email-validator==2.1.1
 # ddgs requires httpx>=0.28.1; no removed httpx APIs (proxies=, app=) are used here.
 httpx==0.28.1
 ddgs==9.14.4
-docker==7.1.0

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Text, Enum, JSON, Integer, ForeignKey
+from sqlalchemy import Column, String, Text, Enum, JSON, Integer, ForeignKey, Boolean, DateTime
 from sqlalchemy.orm import relationship
 from app.db.base import Base, TimestampMixin
 import enum
@@ -38,6 +38,18 @@ class Scenario(TimestampMixin, Base):
     assets = Column(JSON, default=list)
     summary = Column(Text)
     celery_task_id = Column(String)
+
+    # AI-to-Draft-Lab workflow: provenance of scenarios created from a
+    # Threat Feed article or an AI Assistant research session.
+    created_from_ai = Column(Boolean, default=False, nullable=False, server_default="false")
+    source_url = Column(String)
+    source_title = Column(String)
+    source_article = Column(Text)
+    ai_prompt = Column(Text)
+    draft_version = Column(Integer, default=1, nullable=False, server_default="1")
+    approved_by = Column(Integer, ForeignKey("users.id"))
+    approved_at = Column(DateTime(timezone=True))
+    published_at = Column(DateTime(timezone=True))
 
     # Relationships
     events = relationship("ScenarioEvent", back_populates="scenario", cascade="all, delete")

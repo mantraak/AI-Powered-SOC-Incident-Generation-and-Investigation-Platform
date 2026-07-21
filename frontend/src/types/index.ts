@@ -28,6 +28,22 @@ export interface Scenario {
   assets?: any[];
   summary?: string;
   created_at: string;
+  created_from_ai?: boolean;
+  source_url?: string | null;
+  source_title?: string | null;
+  source_article?: string | null;
+  ai_prompt?: string | null;
+  draft_version?: number;
+  approved_by?: number | null;
+  approved_at?: string | null;
+  published_at?: string | null;
+}
+
+export interface DraftConflict {
+  existing_scenario_id: number;
+  existing_title: string;
+  existing_status: string;
+  message: string;
 }
 
 export interface Lab {
@@ -110,76 +126,6 @@ export interface Score {
   grade?: string;
   feedback?: string;
   created_at: string;
-}
-
-export interface LabArchiveSummary {
-  lab_id: number;
-  scenario_id: number;
-  title: string;
-  difficulty: "beginner" | "intermediate" | "advanced" | string;
-  status: "submitted" | "evaluated" | string;
-  started_at?: string;
-  submitted_at?: string;
-  created_at: string;
-  score?: Partial<Score> | null;
-  percent: number;
-  answered_questions: number;
-  correct_answers: number;
-  total_questions: number;
-  mitre_techniques: string[];
-  summary?: string;
-}
-
-export interface LabArchiveDetail {
-  summary: LabArchiveSummary;
-  scenario: Scenario;
-  score?: Partial<Score> | null;
-  investigation_path: Array<{
-    step: number;
-    title: string;
-    description: string;
-    player_action?: string;
-    outcome: "correct" | "needs_review" | string;
-    feedback?: string;
-    evidence?: string;
-    points_awarded: number;
-    time?: string;
-  }>;
-  question_review: Array<{
-    question_id: number;
-    order: number;
-    question_text: string;
-    question_type: string;
-    points: number;
-    hint?: string;
-    player_answer?: string;
-    is_correct?: boolean | null;
-    points_awarded: number;
-    feedback?: string;
-    attached_evidence?: string;
-    answered_at?: string;
-  }>;
-  key_findings: Array<{
-    type: string;
-    title: string;
-    detail?: string;
-    mitre_id?: string;
-    severity?: string;
-  }>;
-  evidence: {
-    events: any[];
-    traffic: any[];
-    traces: any[];
-    artifacts: any[];
-    alerts: any[];
-    indicators: any[];
-    containment_actions: any[];
-  };
-  diary: {
-    opening: string;
-    method: string;
-    review_tip: string;
-  };
 }
 
 export interface SocTool {
@@ -428,47 +374,6 @@ export interface AdminChatResponse {
   scenario_title?: string;
   search_results: SearchResult[];
   search_error?: string;
-}
-
-export interface TerminalSettings {
-  enabled: boolean;
-  image: string;
-  default_minutes: number;
-  extension_minutes: number;
-  max_extensions: number;
-  command_timeout_seconds: number;
-  network_enabled: boolean;
-  memory_limit: string;
-  cpu_quota: number;
-  updated_at?: string;
-}
-
-export interface TerminalSession {
-  id: number;
-  lab_id?: number;
-  image: string;
-  status: "running" | "expired" | "stopped" | "created" | "error" | string;
-  container_name?: string;
-  expires_at: string;
-  remaining_seconds: number;
-  extensions_used: number;
-  extensions_remaining: number;
-  last_command?: string;
-  last_error?: string;
-  created_at?: string;
-}
-
-export interface TerminalState {
-  available: boolean;
-  session?: TerminalSession | null;
-  settings: TerminalSettings;
-}
-
-export interface TerminalExecResult {
-  command: string;
-  exit_code: number;
-  output: string;
-  session?: TerminalSession;
 }
 
 export interface AssistantScenarioHit {

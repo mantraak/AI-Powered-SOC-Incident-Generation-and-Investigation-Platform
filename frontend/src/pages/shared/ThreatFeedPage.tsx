@@ -4,7 +4,8 @@ import api from "../../api/client";
 import { AppLayout, PageHeader } from "../../components/layout/AppLayout";
 import { useAuth } from "../../store/authContext";
 import { Badge, Button, Card, EmptyState, Icon, Spinner } from "../../components/ui";
-import type { NewsArticle, NewsFeed } from "../../types";
+import type { DraftConflict, NewsArticle, NewsFeed } from "../../types";
+import { createDraftLab } from "../../utils/draftLab";
 
 const TOPICS = [
   { label: "All threats", query: "" },
@@ -27,7 +28,17 @@ function timeAgo(published?: string): string {
   return `${Math.round(hours / 24)}d ago`;
 }
 
-function ArticleCard({ article, onDiscuss }: { article: NewsArticle; onDiscuss?: (article: NewsArticle) => void }) {
+function ArticleCard({
+  article,
+  onDiscuss,
+  onCreateLab,
+  creating,
+}: {
+  article: NewsArticle;
+  onDiscuss?: (article: NewsArticle) => void;
+  onCreateLab?: (article: NewsArticle) => void;
+  creating?: boolean;
+}) {
   return (
     <Card className="group hover:border-[#6f91ef]/30 hover:-translate-y-0.5 transition-all flex flex-col">
       <div className="flex items-start gap-4">
@@ -61,7 +72,7 @@ function ArticleCard({ article, onDiscuss }: { article: NewsArticle; onDiscuss?:
         </div>
       </div>
 
-      <div className="flex items-center gap-2 mt-4 pt-3 border-t border-white/[0.07]">
+      <div className="flex items-center gap-2 mt-4 pt-3 border-t border-white/[0.07] flex-wrap">
         <a href={article.link} target="_blank" rel="noreferrer">
           <Button variant="secondary" size="sm">
             <Icon name="open_in_new" className="text-sm" />
@@ -72,6 +83,16 @@ function ArticleCard({ article, onDiscuss }: { article: NewsArticle; onDiscuss?:
           <Button variant="ghost" size="sm" onClick={() => onDiscuss(article)}>
             <Icon name="smart_toy" className="text-sm" />
             Analyze with AI
+          </Button>
+        )}
+        {onCreateLab && (
+          <Button variant="ghost" size="sm" onClick={() => onCreateLab(article)} disabled={creating} data-testid="create-lab-btn">
+            {creating ? (
+              <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              <Icon name="add_box" className="text-sm" />
+            )}
+            Create Lab
           </Button>
         )}
       </div>
@@ -88,6 +109,8 @@ export function ThreatFeedPage() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [creatingLink, setCreatingLink] = useState<string | null>(null);
+  const [conflict, setConflict] = useState<{ article: NewsArticle; data: DraftConflict } | null>(null);
 
   const load = useCallback(async (query: string) => {
     setLoading(true);
@@ -116,6 +139,34 @@ export function ThreatFeedPage() {
 
   const discuss = (article: NewsArticle) => {
     navigate(`/admin/ai-assistant?link=${encodeURIComponent(article.link)}`);
+  };
+
+  const createLab = async (article: NewsArticle, forceNewVersion = false) => {
+    setCreatingLink(article.link);
+    setError("");
+    try {
+      const result = await createDraftLab(
+        {
+          title: article.title,
+          description: article.description,
+          source_url: article.link,
+          source_title: article.source,
+          source_article: article.description,
+        },
+        { forceNewVersion }
+      );
+      if (result.conflict) {
+        setConflict({ article, data: result.conflict });
+        return;
+      }
+      if (result.scenario) {
+        navigate(`/admin/scenarios/${result.scenario.id}`);
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.detail || "Could not create a Draft Lab from this article.");
+    } finally {
+      setCreatingLink(null);
+    }
   };
 
   return (
@@ -170,9 +221,16 @@ export function ThreatFeedPage() {
           </p>
         )}
 
+        {error && (
+          <div className="mb-4 p-3 bg-[#93000a]/25 border border-[#93000a]/60 rounded-lg text-[#ffb4ab] text-sm flex items-start gap-2">
+            <Icon name="error" filled className="text-base flex-shrink-0 mt-0.5" />
+            {error}
+          </div>
+        )}
+
         {loading ? (
           <Spinner />
-        ) : error ? (
+        ) : feed === null && error ? (
           <Card className="!border-[#93000a]/60 !bg-[#93000a]/10">
             <div className="flex items-start gap-3">
               <Icon name="error" filled className="text-[#ffb4ab] text-xl flex-shrink-0" />
@@ -200,8 +258,47 @@ export function ThreatFeedPage() {
                 key={article.id}
                 article={article}
                 onDiscuss={isAdmin ? discuss : undefined}
+                onCreateLab={isAdmin ? (a) => createLab(a) : undefined}
+                creating={creatingLink === article.link}
               />
             ))}
+          </div>
+        )}
+
+        {conflict && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <Card className="max-w-md w-full">
+              <div className="flex items-start gap-3 mb-4">
+                <span className="w-10 h-10 rounded-xl bg-amber-500/15 flex items-center justify-center flex-shrink-0">
+                  <Icon name="content_copy" className="text-amber-300" />
+                </span>
+                <div>
+                  <h3 className="text-sm font-semibold text-[#edf0fa]">Draft Lab already exists</h3>
+                  <p className="text-xs text-[#9299aa] mt-1.5 leading-relaxed">
+                    "{conflict.data.existing_title}" was already created from this article
+                    (status: {conflict.data.existing_status}).
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button
+                  onClick={() => { navigate(`/admin/scenarios/${conflict.data.existing_scenario_id}`); setConflict(null); }}
+                  data-testid="open-existing-draft-btn"
+                >
+                  <Icon name="folder_open" className="text-base" />
+                  Open Existing Draft
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={async () => { const a = conflict.article; setConflict(null); await createLab(a, true); }}
+                  data-testid="create-new-version-btn"
+                >
+                  <Icon name="difference" className="text-base" />
+                  Create New Version
+                </Button>
+                <Button variant="ghost" onClick={() => setConflict(null)}>Cancel</Button>
+              </div>
+            </Card>
           </div>
         )}
       </div>
