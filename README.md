@@ -234,6 +234,52 @@ Open Romulus at <https://localhost:48173>. The same gateway exposes all SOC
 applications under `/wazuh/`, `/misp/`, `/thehive/`, `/grafana/`, and
 `/prometheus/`; tool containers do not publish separate host ports.
 
+### Automated Daily Threat Labs
+
+Every 24 hours the platform converts the live threat feed into hands-on SOC
+labs, without replacing anything in the manual workflow:
+
+```
+Threat Feed -> new articles (last 24h) -> normalise -> deduplicate/correlate
+-> score -> rank -> Top 3 unique threats -> AI scenario -> validate -> publish
+-> student investigation
+```
+
+* **Correlation** groups every article describing the same CVE, malware family,
+  campaign or actor into one threat, so ten reports on one ransomware wave
+  produce one lab, not ten.
+* **Ranking** uses a deterministic, explainable score (severity, exploitability,
+  active exploitation, impact, affected systems, recency, investigation value
+  and intelligence confidence), stored with its full breakdown - no LLM opinion.
+* **Duplicate protection** is a stable per-threat fingerprint plus a check
+  against manually created labs, so a re-run, retry or restart never produces a
+  second lab for the same threat.
+* **Validation** blocks publishing a lab that has no objectives or no evidence;
+  the failure is recorded and can be retried by an administrator.
+
+Students see **Today's Threat Labs** at the top of the Threat Feed and start an
+investigation with one click; administrators get run history, per-threat scores
+and retry controls under **Admin > Threat Pipeline**.
+
+Configuration (all optional, shown with defaults):
+
+```bash
+AUTOMATED_THREAT_LABS_ENABLED=true   # master switch for the feature
+THREAT_LAB_SCHEDULER_ENABLED=true    # in-process 24h scheduler
+THREAT_LAB_GENERATION_LIMIT=3        # labs generated per run
+THREAT_FEED_INTERVAL_HOURS=24        # how often the pipeline runs
+THREAT_FEED_LOOKBACK_HOURS=24        # article window
+THREAT_LAB_MIN_SCORE=3.5             # quality bar; fewer than 3 labs is valid
+THREAT_LAB_AUTO_PUBLISH=true         # false leaves labs for manual approval
+```
+
+The feed itself uses the existing newsdata.io key from **Admin > AI Settings**
+(or `NEWSDATA_API_KEY`). Deployments running a Celery worker can schedule
+`app.workers.threat_tasks` instead of the in-process scheduler; both call the
+same pipeline service.
+
+---
+
 ---
 
 ## Security

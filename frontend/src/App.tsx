@@ -15,6 +15,7 @@ import { AdminCollabLabDetailPage } from "./pages/admin/CollabLabDetailPage";
 import { ModeratorPage } from "./pages/admin/ModeratorPage";
 import { AISettingsPage } from "./pages/admin/AISettingsPage";
 import { AdminAIAssistantPage } from "./pages/admin/AIAssistantPage";
+import { ThreatPipelinePage } from "./pages/admin/ThreatPipelinePage";
 
 // Player pages
 import { PlayerDashboard } from "./pages/player/PlayerDashboard";
@@ -65,6 +66,7 @@ export default function App() {
           <Route path="/admin/ai-assistant" element={<ProtectedRoute role="admin"><AdminAIAssistantPage /></ProtectedRoute>} />
           <Route path="/admin/ai-settings" element={<ProtectedRoute role="admin"><AISettingsPage /></ProtectedRoute>} />
           <Route path="/admin/threat-feed" element={<ProtectedRoute role="admin"><ThreatFeedPage /></ProtectedRoute>} />
+          <Route path="/admin/threat-pipeline" element={<ProtectedRoute role="admin"><ThreatPipelinePage /></ProtectedRoute>} />
 
           {/* Player routes */}
           <Route path="/player/dashboard" element={<ProtectedRoute><PlayerDashboard /></ProtectedRoute>} />

@@ -10,6 +10,7 @@ from app.db.session import SessionLocal, engine
 from app.models.user import User
 from app.core.security import get_password_hash
 from app.services.mitre_sync import sync_catalog
+from app.services.threat_intel import scheduler as threat_scheduler
 
 import app.db.init_db  # noqa: F401 – registers all models with Base
 
@@ -55,7 +56,23 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"❌ Failed to initialize MITRE ATT&CK catalogue: {e}")
 
+    # Automated 24h Threat-Feed -> SOC Lab pipeline. Never blocks startup: the
+    # scheduler is opt-out via AUTOMATED_THREAT_LABS_ENABLED / THREAT_LAB_SCHEDULER_ENABLED,
+    # and any failure here leaves the rest of the platform untouched.
+    try:
+        if threat_scheduler.start():
+            print("✅ Automated threat-lab scheduler started.")
+        else:
+            print("ℹ️  Automated threat-lab scheduler disabled by configuration.")
+    except Exception as e:
+        print(f"❌ Failed to start the automated threat-lab scheduler: {e}")
+
     yield
+
+    try:
+        await threat_scheduler.stop()
+    except Exception:
+        pass
 
     print("🛑 Shutting down AI-SOC Backend...")
 

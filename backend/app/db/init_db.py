@@ -14,6 +14,8 @@ from app.models.ai_setting import AISetting
 from app.models.traffic import ScenarioTraffic
 from app.models.trace import ScenarioTrace
 from app.models.lab_workspace import LabWorkspace
+from app.models.news_setting import NewsSetting
+from app.models.threat_intel import ThreatCandidate, ThreatFeedRun
 from app.models.collaboration import (
     LabGroup,
     LabGroupMember,

@@ -32,6 +32,28 @@ class Settings(BaseSettings):
     NEWS_DEFAULT_QUERY: str = "cybersecurity OR ransomware OR data breach OR malware"
     NEWS_LANGUAGE: str = "en"
     NEWS_CACHE_TTL_SECONDS: int = 900
+    # ── Automated 24h Threat-to-Lab intelligence pipeline ──────────────────
+    # Additive feature: converts the daily threat feed into the Top-N SOC labs.
+    # Disabling this leaves every existing manual workflow untouched.
+    AUTOMATED_THREAT_LABS_ENABLED: bool = True
+    THREAT_LAB_SCHEDULER_ENABLED: bool = True
+    THREAT_LAB_GENERATION_LIMIT: int = 3
+    THREAT_FEED_INTERVAL_HOURS: int = 24
+    THREAT_FEED_LOOKBACK_HOURS: int = 24
+    THREAT_LAB_RUN_ON_STARTUP: bool = False
+    # Comma-separated feed queries used by the pipeline collector. Each one is a
+    # separate newsdata.io request, so keep the list short on free plans.
+    THREAT_FEED_QUERIES: str = (
+        "cybersecurity OR ransomware OR data breach OR malware,"
+        "zero-day OR vulnerability OR exploit,"
+        "threat actor OR APT OR phishing campaign"
+    )
+    THREAT_LAB_MIN_SCORE: float = 3.5
+    THREAT_LAB_DIFFICULTY: str = "intermediate"
+    THREAT_LAB_NUM_QUESTIONS: int = 10
+    THREAT_LAB_AUTO_PUBLISH: bool = True
+    THREAT_LAB_LOCK_TTL_SECONDS: int = 3600
+
     MODERATOR_MAX_SOURCE_CHARS: int = 12000
     MODERATOR_MAX_DOWNLOAD_BYTES: int = 2_000_000
     WAZUH_API_URL: str = "https://wazuh.manager:55000"

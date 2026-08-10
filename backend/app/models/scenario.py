@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Text, Enum, JSON, Integer, ForeignKey, Boolean, DateTime
+from sqlalchemy import Column, String, Text, Enum, JSON, Integer, Float, ForeignKey, Boolean, DateTime
 from sqlalchemy.orm import relationship
 from app.db.base import Base, TimestampMixin
 import enum
@@ -50,6 +50,19 @@ class Scenario(TimestampMixin, Base):
     approved_by = Column(Integer, ForeignKey("users.id"))
     approved_at = Column(DateTime(timezone=True))
     published_at = Column(DateTime(timezone=True))
+
+    # Automated 24h Threat-Intelligence pipeline provenance. All nullable /
+    # defaulted so every existing scenario keeps working untouched; manually
+    # created scenarios simply leave auto_generated False.
+    auto_generated = Column(Boolean, default=False, nullable=False, server_default="false")
+    threat_score = Column(Float)
+    threat_rank = Column(Integer)
+    threat_category = Column(String)
+    threat_severity = Column(String)
+    active_exploitation = Column(Boolean, default=False, nullable=False, server_default="false")
+    threat_fingerprint = Column(String(64), index=True)
+    threat_feed_run_id = Column(Integer, ForeignKey("threat_feed_runs.id"))
+    auto_generated_at = Column(DateTime(timezone=True))
 
     # Relationships
     events = relationship("ScenarioEvent", back_populates="scenario", cascade="all, delete")

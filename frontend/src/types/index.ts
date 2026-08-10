@@ -417,3 +417,101 @@ export interface ModeratorAnalysis {
   source_errors: Array<{ url: string; error: string }>;
   analysis_mode: string;
 }
+
+/* ── Automated 24h Threat-Feed → SOC Lab pipeline ────────────────────────── */
+
+export interface ThreatLab {
+  scenario_id: number;
+  title: string;
+  description?: string | null;
+  status: string;
+  difficulty: string;
+  threat_score?: number | null;
+  threat_rank?: number | null;
+  threat_category?: string | null;
+  threat_severity?: string | null;
+  active_exploitation: boolean;
+  mitre_techniques: string[];
+  iocs: string[];
+  source_url?: string | null;
+  source_title?: string | null;
+  auto_generated_at?: string | null;
+  threat_feed_run_id?: number | null;
+  cve_ids: string[];
+  article_count: number;
+  sources: Array<{ title?: string; url?: string; source?: string; published_at?: string | null }>;
+  score_explanation: string[];
+  my_lab_id?: number | null;
+  my_lab_status?: string | null;
+}
+
+export interface ThreatLabStart {
+  lab_id: number;
+  scenario_id: number;
+  status: string;
+  created: boolean;
+}
+
+export interface ThreatFeedRun {
+  id: number;
+  status: "running" | "completed" | "partial" | "failed";
+  trigger: string;
+  started_at?: string | null;
+  completed_at?: string | null;
+  articles_processed: number;
+  unique_threats_identified: number;
+  threats_selected: number;
+  labs_created: number;
+  labs_failed: number;
+  errors: Array<Record<string, any>>;
+  triggered_by?: number | null;
+}
+
+export interface ThreatCandidate {
+  id: number;
+  fingerprint: string;
+  title: string;
+  summary?: string | null;
+  category?: string | null;
+  severity?: string | null;
+  active_exploitation: boolean;
+  threat_score: number;
+  rank?: number | null;
+  status: "identified" | "selected" | "generating" | "lab_created" | "failed" | "duplicate";
+  scenario_id?: number | null;
+  error?: string | null;
+  cve_ids: string[];
+  malware_names: string[];
+  threat_actors: string[];
+  affected_products: string[];
+  mitre_techniques: string[];
+  iocs: Array<{ ioc_type: string; value: string; description?: string }>;
+  sources: Array<{ title?: string; url?: string; source?: string }>;
+  article_count: number;
+  source_url?: string | null;
+  source_title?: string | null;
+  published_at?: string | null;
+  score_breakdown: Record<string, any>;
+  first_seen_at?: string | null;
+  last_seen_at?: string | null;
+}
+
+export interface ThreatFeedRunDetail extends ThreatFeedRun {
+  candidates: ThreatCandidate[];
+}
+
+export interface ThreatPipelineStatus {
+  enabled: boolean;
+  scheduler_enabled: boolean;
+  scheduler_running: boolean;
+  interval_hours: number;
+  lookback_hours: number;
+  generation_limit: number;
+  min_score: number;
+  auto_publish: boolean;
+  last_run?: ThreatFeedRun | null;
+  next_run_at?: string | null;
+  total_labs_generated: number;
+  failed_candidates: number;
+  news_api_key_configured: boolean;
+}

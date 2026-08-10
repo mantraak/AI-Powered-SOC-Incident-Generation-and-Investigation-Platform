@@ -13,6 +13,7 @@ const adminNav = [
   { path: "/admin/moderator",     label: "AI Moderator",       icon: "psychology"    },
   { path: "/admin/ai-assistant",  label: "AI Assistant",       icon: "smart_toy"     },
   { path: "/admin/threat-feed",   label: "Threat Feed",        icon: "newspaper"     },
+  { path: "/admin/threat-pipeline", label: "Threat Pipeline",  icon: "crisis_alert"  },
   { path: "/admin/ai-settings",   label: "AI Settings",        icon: "settings"      },
 ];
 

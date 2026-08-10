@@ -52,6 +52,16 @@ class ScenarioOut(BaseModel):
     approved_by: Optional[int] = None
     approved_at: Optional[datetime] = None
     published_at: Optional[datetime] = None
+    # Automated 24h threat-intelligence pipeline provenance (None for manual labs).
+    auto_generated: bool = False
+    threat_score: Optional[float] = None
+    threat_rank: Optional[int] = None
+    threat_category: Optional[str] = None
+    threat_severity: Optional[str] = None
+    active_exploitation: bool = False
+    threat_fingerprint: Optional[str] = None
+    threat_feed_run_id: Optional[int] = None
+    auto_generated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

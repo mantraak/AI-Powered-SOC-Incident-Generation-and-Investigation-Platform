@@ -6,6 +6,7 @@ import { useAuth } from "../../store/authContext";
 import { Badge, Button, Card, EmptyState, Icon, Spinner } from "../../components/ui";
 import type { DraftConflict, NewsArticle, NewsFeed } from "../../types";
 import { createDraftLab } from "../../utils/draftLab";
+import { TodaysThreatLabs } from "../../components/threat/TodaysThreatLabs";
 
 const TOPICS = [
   { label: "All threats", query: "" },
@@ -182,6 +183,10 @@ export function ThreatFeedPage() {
             </Button>
           }
         />
+
+        {/* Automatically generated Top-N threat labs (additive section – the
+            manual article feed below is unchanged). */}
+        <TodaysThreatLabs />
 
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-3 mb-6">

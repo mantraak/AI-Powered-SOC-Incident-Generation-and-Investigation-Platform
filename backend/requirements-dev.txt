@@ -1,0 +1,6 @@
+# Test-only dependencies. Install alongside requirements.txt to run `pytest`:
+#   pip install -r requirements.txt -r requirements-dev.txt
+#   pytest
+# The suite uses an in-memory SQLite database and a fixture MITRE catalogue, so
+# it never touches a real Postgres instance or any external API.
+pytest==8.2.2

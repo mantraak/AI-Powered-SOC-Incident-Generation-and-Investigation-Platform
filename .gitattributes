@@ -1,0 +1,5 @@
+# Shell scripts must keep LF endings: entrypoint.sh runs inside the Linux
+# backend image, where a CRLF shebang makes exec fail with
+# "no such file or directory". Without this, a Windows checkout with
+# core.autocrlf=true breaks `docker compose up`.
+*.sh text eol=lf
