@@ -129,6 +129,8 @@ services:
   wazuh-dashboard:
     image: wazuh/wazuh-dashboard:${WAZUH_VERSION:-4.14.5}
     profiles: [wazuh]
+    ports:
+      - "${WAZUH_DASHBOARD_PORT:-8443}:5601"
     hostname: wazuh.dashboard
     restart: unless-stopped
     environment:
@@ -198,6 +200,8 @@ services:
   misp:
     image: ghcr.io/misp/misp-docker/misp-core:${MISP_CORE_TAG:-v2.5.42}
     profiles: [misp]
+    ports:
+      - "${MISP_HTTPS_PORT:-10443}:443"
     restart: unless-stopped
     cap_add: [AUDIT_WRITE]
     environment:
@@ -283,6 +287,8 @@ services:
   thehive:
     image: strangebee/thehive:${THEHIVE_VERSION:-5.7.3}
     profiles: [thehive]
+    ports:
+      - "${THEHIVE_PORT:-9000}:9000"
     restart: unless-stopped
     command:
       - --secret
@@ -355,6 +361,8 @@ services:
   grafana:
     image: grafana/grafana:${GRAFANA_VERSION:-12.0.2}
     profiles: [monitoring]
+    ports:
+      - "${GRAFANA_PORT:-3001}:3000"
     restart: unless-stopped
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}

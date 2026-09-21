@@ -8,10 +8,10 @@ gateway is the only container that publishes a host port.
 
 | Profile | Containers | UI |
 |---|---|---|
-| `wazuh` | Wazuh manager, indexer and dashboard | <https://localhost:48173/wazuh/> |
-| `misp` | MISP, MISP modules, MariaDB and Valkey | <https://localhost:48173/misp/> |
-| `thehive` | TheHive, Cassandra and Elasticsearch | <https://localhost:48173/thehive/> |
-| `monitoring` | Prometheus, Blackbox Exporter and Grafana | <https://localhost:48173/grafana/> |
+| `wazuh` | Wazuh manager, indexer and dashboard | <https://localhost:8443> · gateway: <https://localhost:48173/wazuh/> |
+| `misp` | MISP, MISP modules, MariaDB and Valkey | <https://localhost:10443> · gateway: <https://localhost:48173/misp/> |
+| `thehive` | TheHive, Cassandra and Elasticsearch | <http://localhost:9000> · gateway: <https://localhost:48173/thehive/> |
+| `monitoring` | Prometheus, Blackbox Exporter and Grafana | <http://localhost:3001> · gateway: <https://localhost:48173/grafana/> |
 | `security` | Semgrep, Gitleaks and Trivy (on-demand) | CLI reports |
 
 The complete stack is heavy. Allow Docker Desktop at least 16 GB RAM for all
@@ -107,10 +107,10 @@ infrastructure/docker-compose.tools.yml down --volumes` manually.
 | Application | URL | Development username | Development password |
 |---|---|---|---|
 | Romulus admin | <https://localhost:48173> | `admin@aisocplatform.dev` | `Admin@1234` |
-| Wazuh | <https://localhost:48173/wazuh/> | `admin` | `SecretPassword` |
-| MISP | <https://localhost:48173/misp/> | `admin@admin.test` | `ChangeMe-MISP-2026!` |
-| TheHive | <https://localhost:48173/thehive/> | `admin@thehive.local` | `secret` |
-| Grafana | <https://localhost:48173/grafana/> | `admin` | `ChangeMe-Grafana-2026!` |
+| Wazuh | <https://localhost:8443> · gateway: <https://localhost:48173/wazuh/> | `admin` | `SecretPassword` |
+| MISP | <https://localhost:10443> · gateway: <https://localhost:48173/misp/> | `admin@admin.test` | `ChangeMe-MISP-2026!` |
+| TheHive | <http://localhost:9000> · gateway: <https://localhost:48173/thehive/> | `admin@thehive.local` | `secret` |
+| Grafana | <http://localhost:3001> · gateway: <https://localhost:48173/grafana/> | `admin` | `ChangeMe-Grafana-2026!` |
 | Prometheus | <https://localhost:48173/prometheus/> | No authentication | No authentication |
 
 Immediately change these credentials before sharing or exposing the stack.
