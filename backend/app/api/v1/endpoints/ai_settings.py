@@ -62,7 +62,7 @@ async def test_ai_settings(
         content = await call_ai_async(
             config,
             [{"role": "user", "content": "Reply with exactly: AI connection successful"}],
-            max_tokens=32,
+            max_tokens=1024,  # reasoning models spend tokens thinking before they answer
         )
         return {"ok": True, "message": content[:200]}
     except AIProviderError as exc:
