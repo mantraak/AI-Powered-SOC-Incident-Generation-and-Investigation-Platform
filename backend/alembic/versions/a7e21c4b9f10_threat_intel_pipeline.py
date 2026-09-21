@@ -30,11 +30,11 @@ depends_on: Union[str, Sequence[str], None] = None
 # create_table() create them again fails with "type already exists" on PostgreSQL.
 run_status = postgresql.ENUM(
     'running', 'completed', 'partial', 'failed',
-    name='threatfeedrunstatus',
+    name='threatfeedrunstatus', create_type=False,
 )
 candidate_status = postgresql.ENUM(
     'identified', 'selected', 'generating', 'lab_created', 'failed', 'duplicate',
-    name='threatcandidatestatus',
+    name='threatcandidatestatus', create_type=False,
 )
 
 
