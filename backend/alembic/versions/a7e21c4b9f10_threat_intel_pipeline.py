@@ -17,6 +17,7 @@ from typing import Sequence, Union
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = 'a7e21c4b9f10'
@@ -25,11 +26,13 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
-run_status = sa.Enum(
+# create_type=False: the types are created once, explicitly, in upgrade(); letting
+# create_table() create them again fails with "type already exists" on PostgreSQL.
+run_status = postgresql.ENUM(
     'running', 'completed', 'partial', 'failed',
     name='threatfeedrunstatus',
 )
-candidate_status = sa.Enum(
+candidate_status = postgresql.ENUM(
     'identified', 'selected', 'generating', 'lab_created', 'failed', 'duplicate',
     name='threatcandidatestatus',
 )
