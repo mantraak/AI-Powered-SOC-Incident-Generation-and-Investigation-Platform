@@ -8,8 +8,6 @@ class PlayerScore(TimestampMixin, Base):
 
     player_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     lab_id = Column(Integer, ForeignKey("player_labs.id", ondelete="CASCADE"), nullable=False)
-    player_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    lab_id = Column(Integer, ForeignKey("player_labs.id"), nullable=False)
     scenario_id = Column(Integer, ForeignKey("scenarios.id"), nullable=False)
     question_score = Column(Float, default=0)
     containment_score = Column(Float, default=0)

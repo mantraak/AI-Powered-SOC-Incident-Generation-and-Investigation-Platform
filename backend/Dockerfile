@@ -21,9 +21,8 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 COPY . .
 RUN chmod +x /app/entrypoint.sh
 
-# Schema is managed by Alembic (backend/alembic/versions). entrypoint.sh waits
-# for PostgreSQL to accept connections and runs `alembic upgrade head` before
-# handing off to CMD - no manual `docker exec` migration step required.
+# The schema is created/upgraded by the app on startup (app.db.init_db). entrypoint.sh
+# only waits for PostgreSQL to accept connections before handing off to CMD.
 ENTRYPOINT ["/app/entrypoint.sh"]
 
 # Table creation and idempotent admin seeding happen in the application lifespan.

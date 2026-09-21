@@ -22,6 +22,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    text,
 )
 from sqlalchemy.orm import relationship
 
@@ -51,13 +52,13 @@ class ThreatFeedRun(TimestampMixin, Base):
 
     started_at = Column(DateTime(timezone=True), nullable=True)
     completed_at = Column(DateTime(timezone=True), nullable=True)
-    status = Column(Enum(ThreatFeedRunStatus), default=ThreatFeedRunStatus.running, nullable=False)
-    trigger = Column(String, default="scheduled", nullable=False)  # scheduled | manual | startup
-    articles_processed = Column(Integer, default=0, nullable=False)
-    unique_threats_identified = Column(Integer, default=0, nullable=False)
-    threats_selected = Column(Integer, default=0, nullable=False)
-    labs_created = Column(Integer, default=0, nullable=False)
-    labs_failed = Column(Integer, default=0, nullable=False)
+    status = Column(Enum(ThreatFeedRunStatus), default=ThreatFeedRunStatus.running, server_default="running", nullable=False)
+    trigger = Column(String, default="scheduled", server_default="scheduled", nullable=False)  # scheduled | manual | startup
+    articles_processed = Column(Integer, default=0, server_default="0", nullable=False)
+    unique_threats_identified = Column(Integer, default=0, server_default="0", nullable=False)
+    threats_selected = Column(Integer, default=0, server_default="0", nullable=False)
+    labs_created = Column(Integer, default=0, server_default="0", nullable=False)
+    labs_failed = Column(Integer, default=0, server_default="0", nullable=False)
     errors = Column(JSON, default=list)
     triggered_by = Column(Integer, ForeignKey("users.id"), nullable=True)
 
@@ -83,9 +84,9 @@ class ThreatCandidate(TimestampMixin, Base):
     summary = Column(Text)
     category = Column(String)
     severity = Column(String)
-    active_exploitation = Column(Boolean, default=False, nullable=False)
+    active_exploitation = Column(Boolean, default=False, server_default=text("false"), nullable=False)
 
-    threat_score = Column(Float, default=0.0, nullable=False)
+    threat_score = Column(Float, default=0.0, server_default="0", nullable=False)
     score_breakdown = Column(JSON, default=dict)
     rank = Column(Integer)
 
@@ -100,11 +101,11 @@ class ThreatCandidate(TimestampMixin, Base):
     source_title = Column(String)
     sources = Column(JSON, default=list)          # [{title, url, source, published_at}]
     article_ids = Column(JSON, default=list)
-    article_count = Column(Integer, default=1, nullable=False)
+    article_count = Column(Integer, default=1, server_default="1", nullable=False)
     article_text = Column(Text)
     published_at = Column(DateTime(timezone=True), nullable=True)
 
-    status = Column(Enum(ThreatCandidateStatus), default=ThreatCandidateStatus.identified, nullable=False)
+    status = Column(Enum(ThreatCandidateStatus), default=ThreatCandidateStatus.identified, server_default="identified", nullable=False)
     scenario_id = Column(Integer, ForeignKey("scenarios.id", ondelete="SET NULL"), nullable=True)
     error = Column(Text)
     first_seen_at = Column(DateTime(timezone=True), nullable=True)

@@ -1,6 +1,6 @@
 #!/bin/sh
 # Runs before every backend-image container start (see Dockerfile ENTRYPOINT).
-# Only waits for Postgres / runs migrations when DATABASE_URL is actually set
+# Only waits for Postgres when DATABASE_URL is actually set
 # in the environment - that's true for the `backend` service, but not for the
 # `mitre-sync` one-off job (same image, different command, no DB access
 # needed), so it's skipped there rather than failing or hanging.
@@ -32,8 +32,8 @@ print("[entrypoint] PostgreSQL did not become ready in time.", file=sys.stderr)
 sys.exit(1)
 PYEOF
 
-  echo "[entrypoint] Running Alembic migrations..."
-  alembic upgrade head
+  # Tables/columns are created and upgraded by the app itself on startup
+  # (app.db.init_db.init_db, called from app/main.py).
 fi
 
 echo "[entrypoint] Starting: $*"

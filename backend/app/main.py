@@ -5,17 +5,16 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.api import api_router
 from app.core.config import settings
-from app.db.base import Base
 from app.db.session import SessionLocal, engine
 from app.models.user import User
 from app.core.security import get_password_hash
 from app.services.mitre_sync import sync_catalog
 from app.services.threat_intel import scheduler as threat_scheduler
 
-import app.db.init_db  # noqa: F401 – registers all models with Base
+from app.db.init_db import init_db  # also registers all models with Base
 
-# Create database tables (development only)
-Base.metadata.create_all(bind=engine)
+# Create missing tables and bring older databases up to the current schema
+init_db(engine)
 
 
 def ensure_default_admin() -> None:

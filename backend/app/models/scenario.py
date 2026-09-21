@@ -42,7 +42,7 @@ class Scenario(TimestampMixin, Base):
     # AI-to-Draft-Lab workflow: provenance of scenarios created from a
     # Threat Feed article or an AI Assistant research session.
     created_from_ai = Column(Boolean, default=False, nullable=False, server_default="false")
-    source_url = Column(String)
+    source_url = Column(String, index=True)
     source_title = Column(String)
     source_article = Column(Text)
     ai_prompt = Column(Text)
