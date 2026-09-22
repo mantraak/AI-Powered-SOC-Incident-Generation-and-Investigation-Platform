@@ -120,10 +120,14 @@ jobs:
           command -v docker >/dev/null
           docker compose version >/dev/null
           test -f infrastructure/docker-compose.yml
-          test -f .env || {
-            echo "Missing $DEPLOY_PATH/.env; create it on the server before deploying." >&2
-            exit 1
-          }
+
+          if [ ! -f .env ]; then
+            command -v openssl >/dev/null
+            umask 077
+            secret_key="$(openssl rand -hex 48)"
+            printf 'SECRET_KEY=%s\nROMULUS_PORT=48173\n' "$secret_key" > .env
+            echo "Created $DEPLOY_PATH/.env; add optional production settings there."
+          fi
 
           docker network inspect ai-soc-tools >/dev/null 2>&1 || \
             docker network create ai-soc-tools >/dev/null

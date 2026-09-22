@@ -32,5 +32,15 @@ Generate the last value from a trusted machine with `ssh-keyscan -H HOST`, then
 verify its fingerprint before saving it. Add the matching public key to the
 deployment user's `~/.ssh/authorized_keys` file on the server.
 
+On the first deployment, the workflow creates `$DEPLOY_PATH/.env` with
+owner-only permissions and a randomly generated application secret. Existing
+environment files are preserved. Add optional production settings directly to
+the server file after the initial deployment. Its initial contents resemble:
+
+```dotenv
+SECRET_KEY=replace-with-a-long-random-value
+ROMULUS_PORT=48173
+```
+
 Once configured, merge or push to `main`, or choose **Run workflow** under
 **Actions > Deploy to production**.
