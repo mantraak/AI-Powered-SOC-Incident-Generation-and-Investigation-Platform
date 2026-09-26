@@ -35,12 +35,12 @@ def encrypt_api_key(api_key: str) -> str:
     return _fernet().encrypt(api_key.encode("utf-8")).decode("ascii")
 
 
-def decrypt_api_key(value: str) -> str:
+def decrypt_api_key(value: str, label: str = "AI key") -> str:
     try:
         return _fernet().decrypt(value.encode("ascii")).decode("utf-8")
     except (InvalidToken, ValueError) as exc:
         raise AIProviderError(
-            "Stored AI key cannot be decrypted. Re-enter it after changing SECRET_KEY."
+            f"Stored {label} cannot be decrypted. Re-enter it after changing SECRET_KEY."
         ) from exc
 
 

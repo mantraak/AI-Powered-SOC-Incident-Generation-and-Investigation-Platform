@@ -29,8 +29,13 @@ class Settings(BaseSettings):
     # Threat news feed. Administrators can override the key in the UI.
     NEWSDATA_API_KEY: Optional[str] = None
     NEWSDATA_API_URL: str = "https://newsdata.io/api/1/latest"
-    NEWS_DEFAULT_QUERY: str = "cybersecurity OR ransomware OR data breach OR malware"
+    # Quoted phrases keep multi-word terms together; unquoted, "data breach"
+    # matches any article that merely contains both words.
+    NEWS_DEFAULT_QUERY: str = 'ransomware OR malware OR cyberattack OR "data breach" OR hackers'
     NEWS_LANGUAGE: str = "en"
+    # newsdata.io has no dedicated security category, so off-topic sections are
+    # excluded instead (at most 5; empty disables the filter).
+    NEWS_EXCLUDE_CATEGORIES: str = "entertainment,sports,lifestyle,food,tourism"
     NEWS_CACHE_TTL_SECONDS: int = 900
     # ── Automated 24h Threat-to-Lab intelligence pipeline ──────────────────
     # Additive feature: converts the daily threat feed into the Top-N SOC labs.
@@ -44,9 +49,9 @@ class Settings(BaseSettings):
     # Comma-separated feed queries used by the pipeline collector. Each one is a
     # separate newsdata.io request, so keep the list short on free plans.
     THREAT_FEED_QUERIES: str = (
-        "cybersecurity OR ransomware OR data breach OR malware,"
-        "zero-day OR vulnerability OR exploit,"
-        "threat actor OR APT OR phishing campaign"
+        'ransomware OR malware OR cyberattack OR "data breach" OR hackers,'
+        '"zero-day" OR "actively exploited" OR "security flaw" OR CVE,'
+        '"threat actor" OR phishing OR spyware OR botnet OR infostealer'
     )
     THREAT_LAB_MIN_SCORE: float = 3.5
     THREAT_LAB_DIFFICULTY: str = "intermediate"

@@ -25,6 +25,7 @@ from app.models.threat_intel import ThreatCandidate, ThreatCandidateStatus
 from app.services.generator_service import run_ai_generation
 from app.services.mitre_service import MitreDataUnavailable, mitre_catalog
 from app.services.threat_intel.correlator import ThreatCluster
+from app.services.threat_intel.normalizer import has_any
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +75,7 @@ class ThreatScenarioGenerator:
 
         lowered = " ".join(article.text for article in cluster.articles).lower()
         for keywords, technique in KEYWORD_TECHNIQUES:
-            if any(keyword in lowered for keyword in keywords):
+            if has_any(lowered, keywords):
                 suggested.append(technique)
 
         ordered: list[str] = []

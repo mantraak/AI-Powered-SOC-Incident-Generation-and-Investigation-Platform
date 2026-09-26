@@ -114,6 +114,71 @@ NOISE = [
 ]
 
 
+# General news that keyword search returns because a term appears in passing.
+OFF_TOPIC = [
+    feed_row(
+        "off-1",
+        "7 Ways Content Piracy is Reshaping Africa's Entertainment Industry",
+        "Producers say piracy drains revenue from streaming sources and resources, while "
+        "studios exploit new distribution deals to protect their intellectual property.",
+        source="CultureDesk",
+        hours_ago=2,
+    ),
+    feed_row(
+        "off-2",
+        "2026 Election Questionnaire: State Representative candidate",
+        "The candidate discusses energy security, affordability and the threat of rising "
+        "costs, and says the state should attack the housing shortage.",
+        source="LocalNews",
+        hours_ago=3,
+    ),
+    feed_row(
+        "off-3",
+        "Voter turnout suggests most of us don't care about city services",
+        "How bad would things have to get to improve voter turnout? Community association "
+        "leaders and the captain of the local team weigh in.",
+        source="CityPress",
+        hours_ago=4,
+    ),
+    feed_row(
+        "off-4",
+        "Striker's late attack seals win as defence holds firm",
+        "The team exploited gaps in the security of the opposing back line.",
+        source="SportsDesk",
+        hours_ago=5,
+    ),
+    feed_row(
+        "off-5",
+        "Climate vulnerability threatens security of coastal towns",
+        "The threat of flooding exposes the vulnerability of housing.",
+        source="ClimateWire",
+        hours_ago=5,
+    ),
+]
+
+# Real incidents that carry no CVE, known family, actor or indicator.
+ENTITY_FREE_INCIDENTS = [
+    feed_row(
+        "inc-1",
+        "New infostealer spreads through cracked software downloads",
+        "The malware steals browser passwords and crypto wallets.",
+        hours_ago=2,
+    ),
+    feed_row(
+        "inc-2",
+        "City council systems offline after cyber-attack",
+        "Officials said the incident disrupted services and an investigation is under way.",
+        hours_ago=2,
+    ),
+    feed_row(
+        "inc-3",
+        "Cisco fixes critical vulnerability in IOS XE web UI",
+        "Attackers could exploit the flaw to gain admin access; Cisco urges customers to patch.",
+        hours_ago=2,
+    ),
+]
+
+
 def mixed_feed() -> list[dict]:
     return [*ZERO_DAY_CVE, *RANSOMWARE_CAMPAIGN, *CLOUD_IDENTITY, *NOISE]
 

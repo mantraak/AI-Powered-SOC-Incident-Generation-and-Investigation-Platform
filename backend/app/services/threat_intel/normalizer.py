@@ -137,6 +137,20 @@ SECURITY_RELEVANCE_KEYWORDS = (
     "extortion", "leak", "stealer",
 )
 
+# Terms that unambiguously describe a security incident. Words such as
+# "security", "threat", "attack", "exploit" or "vulnerability" also appear in
+# politics, sport and climate news ("the striker exploited the gap"), so they
+# only count as corroboration, never as the primary signal.
+INCIDENT_KEYWORDS = (
+    "ransomware", "malware", "cyberattack", "cyber attack", "cyber-attack", "data breach",
+    "security breach", "hacked", "hacker", "hacking", "zero-day", "zero day", "0-day",
+    "security vulnerability", "security flaw", "phishing", "spyware", "botnet",
+    "backdoor", "trojan", "infostealer", "stealer", "wiper", "ddos", "denial of service",
+    "cyber espionage", "threat actor", "credential theft", "stolen credentials",
+    "data leak", "leaked data", "supply chain attack", "command-and-control",
+    "command and control",
+)
+
 _TOKEN_RE = re.compile(r"[a-z0-9][a-z0-9&.+-]*")
 _TITLE_STOPWORDS = {
     "the", "a", "an", "and", "or", "of", "in", "on", "to", "for", "with", "by", "from",
@@ -148,6 +162,39 @@ _TITLE_STOPWORDS = {
     "used", "attack", "attacks", "cyber", "cybersecurity", "security", "hackers", "hacker",
     "flaw", "flaws", "bug", "bugs", "issue", "issues", "users", "user", "million", "billion",
 }
+
+
+_KEYWORD_PATTERNS: dict[str, re.Pattern] = {}
+
+
+def keyword_pattern(keyword: str) -> re.Pattern:
+    """Whole-word pattern for a keyword, tolerating plural/verb suffixes.
+
+    Plain substring tests let short terms fire inside unrelated words ("rce" in
+    "source", "apt" in "captain", "sso" in "association"), which is how general
+    news was being tagged as vulnerabilities. Keywords ending in punctuation
+    (e.g. "cve-", "review:") are treated as prefixes.
+    """
+    pattern = _KEYWORD_PATTERNS.get(keyword)
+    if pattern is None:
+        body = re.escape(keyword)
+        if keyword[-1:].isalnum():
+            body += r"(?:s|es|ed|ing)?(?![a-z0-9])"
+        pattern = re.compile(rf"(?<![a-z0-9]){body}")
+        _KEYWORD_PATTERNS[keyword] = pattern
+    return pattern
+
+
+def has_keyword(lowered: str, keyword: str) -> bool:
+    return keyword_pattern(keyword).search(lowered) is not None
+
+
+def has_any(lowered: str, keywords) -> bool:
+    return any(has_keyword(lowered, keyword) for keyword in keywords)
+
+
+def count_keywords(lowered: str, keywords) -> int:
+    return sum(1 for keyword in keywords if has_keyword(lowered, keyword))
 
 
 @dataclass
@@ -287,8 +334,8 @@ class ThreatNormalizer:
         article.iocs = self.extract_iocs(text, article.link)
         article.category = self.classify(lowered, categories)
         article.severity = self.severity_of(lowered, article)
-        article.active_exploitation = any(word in lowered for word in ACTIVE_EXPLOITATION_KEYWORDS)
-        article.security_relevant = self.is_security_relevant(lowered)
+        article.active_exploitation = has_any(lowered, ACTIVE_EXPLOITATION_KEYWORDS)
+        article.security_relevant = self.is_security_relevant(lowered, article)
         article.title_tokens = title_tokens(article.title)
         return article
 
@@ -357,25 +404,46 @@ class ThreatNormalizer:
     @staticmethod
     def classify(lowered: str, categories: list[str]) -> str:
         for category, keywords in CATEGORY_KEYWORDS:
-            if any(keyword in lowered for keyword in keywords):
+            if has_any(lowered, keywords):
                 return category
         return "malware"
 
     @staticmethod
     def severity_of(lowered: str, article: NormalizedArticle) -> str:
         for severity in ("critical", "high", "medium", "low"):
-            if any(keyword in lowered for keyword in SEVERITY_KEYWORDS[severity]):
+            if has_any(lowered, SEVERITY_KEYWORDS[severity]):
                 return severity
-        if article.cve_ids and any(word in lowered for word in ACTIVE_EXPLOITATION_KEYWORDS):
+        if article.cve_ids and has_any(lowered, ACTIVE_EXPLOITATION_KEYWORDS):
             return "critical"
         if article.cve_ids or article.malware_names or article.threat_actors:
             return "high"
         return "medium"
 
     @staticmethod
-    def is_security_relevant(lowered: str) -> bool:
-        if any(keyword in lowered for keyword in NON_THREAT_KEYWORDS):
-            # Business/marketing stories occasionally still describe an incident;
-            # only reject when there is no strong security signal at all.
-            return sum(1 for keyword in SECURITY_RELEVANCE_KEYWORDS if keyword in lowered) >= 3
-        return any(keyword in lowered for keyword in SECURITY_RELEVANCE_KEYWORDS)
+    def is_security_relevant(lowered: str, article: NormalizedArticle | None = None) -> bool:
+        """Only articles with a concrete security signal can become a lab.
+
+        A signal is a hard entity (CVE, known malware/actor, hash or IP
+        indicator), an incident term corroborated by further security language,
+        or a named product described in security terms. Generic mentions of
+        "security" or "threat" are not enough.
+        """
+        hard_entity = bool(article and (
+            article.cve_ids or article.malware_names or article.threat_actors
+            or any(ioc["ioc_type"] in ("hash", "ip") for ioc in article.iocs)
+        ))
+        incident_hits = count_keywords(lowered, INCIDENT_KEYWORDS)
+        # Distinct security terms of either kind; overlapping entries count once.
+        security_terms = count_keywords(
+            lowered, set(INCIDENT_KEYWORDS) | set(SECURITY_RELEVANCE_KEYWORDS)
+        )
+        named_product = bool(article and article.affected_products)
+
+        needed = 3 if has_any(lowered, NON_THREAT_KEYWORDS) else 2
+        # Business/marketing stories occasionally still describe an incident;
+        # they need one more corroborating term than ordinary reporting.
+        return (
+            hard_entity
+            or (incident_hits >= 1 and security_terms >= needed)
+            or (named_product and security_terms >= needed + 1)
+        )

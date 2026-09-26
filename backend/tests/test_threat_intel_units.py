@@ -70,6 +70,30 @@ def test_non_threat_articles_are_flagged_irrelevant(normalizer):
         assert article.security_relevant is False, row["title"]
 
 
+def test_general_news_without_a_security_signal_is_irrelevant(normalizer):
+    for row in factories.OFF_TOPIC:
+        article = normalizer.normalize(row)
+        assert article.security_relevant is False, row["title"]
+
+
+def test_keywords_match_whole_words_only():
+    from app.services.threat_intel.normalizer import has_keyword
+
+    assert not has_keyword("streaming sources and resources", "rce")
+    assert not has_keyword("the team captain", "apt")
+    assert not has_keyword("community association", "sso")
+    assert has_keyword("unauthenticated rce in the gateway", "rce")
+    assert has_keyword("the flaw was actively exploited", "exploit")
+    assert has_keyword("tracked as cve-2026-1234", "cve-")
+
+
+def test_real_incidents_stay_relevant(normalizer):
+    for row in factories.mixed_feed() + factories.ENTITY_FREE_INCIDENTS:
+        if row in factories.NOISE:
+            continue
+        assert normalizer.normalize(row).security_relevant is True, row["title"]
+
+
 def test_news_outlet_domains_are_not_treated_as_iocs(normalizer):
     article = normalizer.normalize(factories.feed_row(
         "d-1", "Breach disclosed", "Reported by bleepingcomputer.com and evil-c2.top",
@@ -267,3 +291,38 @@ def test_mitre_suggestions_are_validated():
     generator = ThreatScenarioGenerator()
     valid = generator.validate_techniques(["T1190", "T9999", "not-an-id"])
     assert valid == ["T1190"]
+
+
+# -- news feed filtering ----------------------------------------------------------
+
+
+def test_news_fetch_excludes_off_topic_categories_and_stories(db, monkeypatch):
+    import asyncio
+
+    import httpx
+
+    from app.services import news_service
+
+    news_service._cache.clear()
+    seen: dict = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.update(request.url.params)
+        rows = [
+            {**row, "article_id": row["id"], "source_name": row["source"],
+             "pubDate": row["published_at"]}
+            for row in factories.ZERO_DAY_CVE[:1] + factories.OFF_TOPIC
+        ]
+        return httpx.Response(200, json={"status": "success", "results": rows})
+
+    real_client = httpx.AsyncClient
+    monkeypatch.setattr(
+        news_service.httpx, "AsyncClient",
+        lambda **kwargs: real_client(transport=httpx.MockTransport(handler)),
+    )
+
+    feed = asyncio.run(news_service.fetch_latest_news(db, "ransomware"))
+    news_service._cache.clear()
+
+    assert seen["excludecategory"] == "entertainment,sports,lifestyle,food,tourism"
+    assert [article["id"] for article in feed["articles"]] == ["cve-1"]

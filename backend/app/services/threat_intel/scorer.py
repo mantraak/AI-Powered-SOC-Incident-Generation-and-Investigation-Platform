@@ -18,6 +18,7 @@ from app.services.threat_intel.correlator import ThreatCluster
 from app.services.threat_intel.normalizer import (
     IMPACT_KEYWORDS,
     INVESTIGATION_VALUE_KEYWORDS,
+    count_keywords,
 )
 
 # component -> maximum contribution. Sum defines the raw ceiling.
@@ -98,7 +99,7 @@ class ThreatScorer:
         points = 0.0
         if cluster.cve_ids:
             points += 0.8
-        hits = sum(1 for keyword in _EXPLOITABILITY_KEYWORDS if keyword in text)
+        hits = count_keywords(text, _EXPLOITABILITY_KEYWORDS)
         points += min(1.2, hits * 0.4)
         return min(COMPONENT_WEIGHTS["exploitability"], points)
 
@@ -112,7 +113,7 @@ class ThreatScorer:
 
     @staticmethod
     def _impact(text: str) -> float:
-        hits = sum(1 for keyword in IMPACT_KEYWORDS if keyword in text)
+        hits = count_keywords(text, IMPACT_KEYWORDS)
         return min(COMPONENT_WEIGHTS["impact"], hits * 0.4)
 
     @staticmethod
@@ -146,7 +147,7 @@ class ThreatScorer:
             points += 0.4
         if cluster.cve_ids:
             points += 0.3
-        hits = sum(1 for keyword in INVESTIGATION_VALUE_KEYWORDS if keyword in text)
+        hits = count_keywords(text, INVESTIGATION_VALUE_KEYWORDS)
         points += min(0.8, hits * 0.2)
         # A threat with no technical hooks at all cannot make a good lab.
         if not (cluster.cve_ids or cluster.malware_names or cluster.threat_actors

@@ -21,7 +21,7 @@ def _password() -> str:
 def _credentials(workspace: LabWorkspace) -> dict:
     if not workspace.encrypted_credentials:
         return {}
-    return json.loads(decrypt_api_key(workspace.encrypted_credentials))
+    return json.loads(decrypt_api_key(workspace.encrypted_credentials, "workspace credential"))
 
 
 def _scenario_tools(lab: PlayerLab) -> list[str]:

@@ -27,7 +27,7 @@ class NewsKeyMissing(NewsError):
 def get_api_key(db: Session) -> str:
     record = db.query(NewsSetting).order_by(NewsSetting.id.asc()).first()
     if record:
-        return decrypt_api_key(record.encrypted_api_key)
+        return decrypt_api_key(record.encrypted_api_key, "newsdata.io key")
     if settings.NEWSDATA_API_KEY:
         return settings.NEWSDATA_API_KEY
     raise NewsKeyMissing("No newsdata.io API key is configured. Set one in Admin › AI Settings.")
@@ -76,6 +76,19 @@ def _normalize_article(row: dict) -> dict | None:
     }
 
 
+def _is_security_story(article: dict) -> bool:
+    """Apply the threat pipeline's relevance gate to feed results.
+
+    Keyword search still returns general news that mentions a search term in
+    passing; the Threat Feed page and the pipeline should both drop it.
+    """
+    # Imported here: the threat_intel package imports this module via its collector.
+    from app.services.threat_intel.normalizer import ThreatNormalizer
+
+    normalized = ThreatNormalizer().normalize(article)
+    return bool(normalized and normalized.security_relevant)
+
+
 def _raise_for_newsdata_error(response: httpx.Response) -> None:
     if response.status_code == 200:
         return
@@ -113,6 +126,8 @@ async def fetch_latest_news(
         "q": search,
         "language": settings.NEWS_LANGUAGE,
     }
+    if settings.NEWS_EXCLUDE_CATEGORIES.strip():
+        params["excludecategory"] = settings.NEWS_EXCLUDE_CATEGORIES.strip()
     if page:
         params["page"] = page
 
@@ -138,7 +153,7 @@ async def fetch_latest_news(
     articles = [
         article
         for article in (_normalize_article(row) for row in rows if isinstance(row, dict))
-        if article
+        if article and _is_security_story(article)
     ] if isinstance(rows, list) else []
 
     result = {
